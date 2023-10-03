@@ -39,6 +39,7 @@ Shader::Shader(const char* vertexFile, const char* fragmentFile){
     if(!success){
         glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        exit(-1);
     }
     // Code for checking errors end here
 
@@ -55,6 +56,7 @@ Shader::Shader(const char* vertexFile, const char* fragmentFile){
     if(!success){
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+        exit(-1);
     }
 
 
@@ -71,6 +73,7 @@ Shader::Shader(const char* vertexFile, const char* fragmentFile){
     if(!success){
         glGetProgramInfoLog(ID, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl; 
+        exit(-1);
     }
 
     //Make sure to delete the shaders since we dont need them anymore

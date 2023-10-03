@@ -8,10 +8,10 @@
 #include "libs/VBO.h"
 #include "libs/VAO.h"
 #include "libs/EBO.h"
+#include "libs/Texture.h"
 
 
 
-using namespace std;
 GLFWwindow* glINIT(int WIDTH, int HEIGHT);
 
 int WIDTH = 800;
@@ -65,37 +65,15 @@ int main(){
     EBO1.Unbind();
 
     GLuint scaleUniId = glGetUniformLocation(shaderProgram.ID, "scale");
-    GLuint tex0UniId = glGetUniformLocation(shaderProgram.ID, "tex0");
-    shaderProgram.Activate();
-    glUniform1i(tex0UniId, 0);
 
     //Image DIMs
-    int imgWidth, imgHeight, imgColCh;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char* bytes = stbi_load("Textures/catto.jpg", &imgWidth, &imgHeight, &imgColCh, 0);
-    
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, bytes);
-    
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-
-    stbi_image_free(bytes);
+    Texture popCat("Textures/catto.jpg", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGB, GL_UNSIGNED_BYTE);
+    popCat.texUnit(shaderProgram, "tex0", 0);
 
     while(!glfwWindowShouldClose(window)){
         shaderProgram.Activate();
         glUniform1f(scaleUniId, 0.5f);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        popCat.Bind();
         VAO1.Bind();
         glDrawElements(GL_TRIANGLES, arrayLen(indices), GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);
@@ -107,7 +85,7 @@ int main(){
     VBO1.Delete();
     EBO1.Delete();
     shaderProgram.Delete();
-    glDeleteTextures(1, &texture);
+    popCat.Delete();
     glfwTerminate();
     return 0;
 }
@@ -122,15 +100,15 @@ GLFWwindow* glINIT(int WIDTH, int HEIGHT){
     window = glfwCreateWindow(WIDTH, HEIGHT, "HelloTriangle", NULL, NULL);
 
     if(!window){
-        cout << "ERROR::WINDOW::CREATION::Failed to create window"<< endl;
-        exit(1);
+        std::cout << "ERROR::WINDOW::CREATION::Failed to create window"<< std::endl;
+        exit(-1);
     }
 
     //MAKE THE WINDOW THE CONTEXT BEFORE LOADING OPENGL STUFF
     glfwMakeContextCurrent(window);
     if(!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)){
-        cout << "Failed to initalise GLAD" << endl;
-        exit(1);
+        std::cout << "Failed to initalise GLAD" << std::endl;
+        exit(-1);
     }
     
     glViewport(0, 0, WIDTH, HEIGHT);

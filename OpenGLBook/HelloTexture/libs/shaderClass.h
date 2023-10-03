@@ -1,5 +1,6 @@
 #ifndef SHADER_CLASS_H
 #define SHDAER_CLASS_H
+#pragma once
 
 #include <glad.h>
 #include <fstream>
