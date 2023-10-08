@@ -14,7 +14,7 @@ class Texture{
         Texture(const char* image, GLenum texType, GLenum slot, GLenum format, GLenum pixelType);
 
 
-        void texUnit(Shader& ShaderProgram, const char* uniform, GLuint unit);
+        void texUnit(Shader ShaderProgram, const char* uniform, GLuint unit);
         void Bind();
         void Unbind();
         void Delete();
