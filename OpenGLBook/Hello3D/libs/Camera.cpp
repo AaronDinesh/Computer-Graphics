@@ -34,6 +34,12 @@ void Camera::Inputs(GLFWwindow* window){
 		Position += speed * glm::normalize(glm::cross(Orientation, Up));
 	}
 
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
+		Position = glm::vec3(0.0f, 0.0f, 2.0f);
+		Orientation = glm::vec3(0.0f, 0.0f, -1.0f);
+	}
+
+
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
 		Position += speed * Up;
 	}
@@ -43,9 +49,9 @@ void Camera::Inputs(GLFWwindow* window){
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
-		speed = 0.4f;
+		speed = L_SHIFT_SPEED;
 	}else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE){
-		speed = 0.1f;
+		speed = NORM_SPEED;
 	}
 
 

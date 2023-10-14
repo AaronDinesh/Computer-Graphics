@@ -21,9 +21,10 @@ class Camera{
         int screenHeight;
         bool firstClick;
 
-        float speed = 0.1f;
         float sensitivity = 1.0f;
-
+        const float L_SHIFT_SPEED = 0.1f;
+        const float NORM_SPEED = 0.01f;
+        float speed = NORM_SPEED;
 
         Camera(int width, int height, glm::vec3 position);
 
