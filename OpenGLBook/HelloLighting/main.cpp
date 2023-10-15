@@ -177,6 +177,7 @@ int main(){
         camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
         shaderProgram.Activate();
+        glUniform3f(glGetUniformLocation(shaderProgram.ID,"camPos"), camera.Position.x, camera.Position.y, camera.Position.z);
         camera.Matrix(shaderProgram, "camMatrix");
 
 
@@ -201,6 +202,12 @@ int main(){
     VAO1.Delete();
     VBO1.Delete();
     EBO1.Delete();
+
+    lightVAO.Delete();
+    lightVBO.Delete();
+    lightEBO.Delete();
+
+
     shaderProgram.Delete();
     popCat.Delete();
     glfwTerminate();
