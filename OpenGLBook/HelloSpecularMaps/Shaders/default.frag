@@ -6,6 +6,7 @@ in vec3 Normal;
 in vec3 crntPosition;
 
 uniform sampler2D tex0;
+uniform sampler2D tex1;
 uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 camPos;
@@ -22,8 +23,8 @@ void main(){
     vec3 reflectDirection = reflect(-lightDirection, normal);
 
     //Increasing the power has the effect of making the specular light more point like
-    float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 8);
+    float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
     float specular = specAmount * specularLight;
 
-    FragColor = texture(tex0, texCoords) * lightColor * (diffuse + ambient + specular);
+    FragColor = texture(tex0, texCoords) * lightColor * (diffuse + ambient) + texture(tex1, texCoords).r * specular;
 };
