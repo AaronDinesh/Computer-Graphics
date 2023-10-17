@@ -15,7 +15,7 @@ void main(){
     vec3 normal = normalize(Normal);
     vec3 lightDirection = normalize(lightPosition - crntPosition);
 
-    float diffuse = max(dot(normal, lightPosition), 0.0f);
+    float diffuse = max(dot(normal, lightDirection), 0.0f);
 
     float specularLight = 0.5f;
     vec3 viewDirection = normalize(camPos - crntPosition);
@@ -25,5 +25,5 @@ void main(){
     float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 8);
     float specular = specAmount * specularLight;
 
-    FragColor = texture(tex0, texCoords) * lightColor * (diffuse + ambient + specular);
+    FragColor = texture(tex0, texCoords) * lightColor * (diffuse + ambient + diffuse);
 };
