@@ -1,0 +1,1 @@
+g++ main.cpp glad.c -o main -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lGLAD
