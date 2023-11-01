@@ -100,7 +100,5 @@ vec4 returnSpecularTexture(){
 
 
 void main(){
-    FragColor = pointLight();
-
-
+    FragColor = directionalLight();
 };
