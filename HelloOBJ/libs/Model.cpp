@@ -1,30 +1,133 @@
 #include"Model.h"
 
-Model::Model(const char* file)
-{
+Model::Model(const char* file, float scale, glm::mat4 initTransform){
 	// Make a JSON object
 	std::string text = get_file_contents(file);
 	JSON = json::parse(text);
+	initModelMatrix = initTransform;
 
 	// Get the binary data
 	Model::file = file;
 	data = getData();
+	modelScale = scale;
 
 	// Traverse all nodes
 	traverseNode(0);
+	findBindingBox();
+	computeCenter();
 }
 
-void Model::Draw(Shader& shader, Camera& camera)
-{
+void Model::Draw(Shader& shader, Camera& camera){
 	// Go over all meshes and draw each one
-	for (unsigned int i = 0; i < meshes.size(); i++)
-	{
-		meshes[i].Mesh::Draw(shader, camera, matricesMeshes[i]);
+	for(unsigned int i = 0; i < meshes.size(); i++){
+		//meshes[i].Mesh::Draw(shader, camera, matricesMeshes[i]);
+		shader.Activate();
+		glUniformMatrix4fv(glGetUniformLocation(shader.ID, "myTotalTransformation"), 1, GL_FALSE, glm::value_ptr(myTotalTransformation));
+		meshes[i].Mesh::Draw(shader, camera, initModelMatrix, glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(modelScale, modelScale, modelScale));
 	}
 }
 
-void Model::loadMesh(unsigned int indMesh)
-{
+void Model::handleKeyboardInputs(GLFWwindow* window, Shader& shader){
+	if(glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS){
+		myRotation = myRotation * glm::inverse(myRotation);
+		myTranslation = myTranslation * glm::inverse(myTranslation);
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS){
+		rotationAngleYaw = 1;
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			myRotation = glm::rotate(myRotation, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		}else{
+			myRotation = glm::rotate(myRotation, glm::radians(rotationAngleYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS){
+		rotationAngleYaw = -1;
+		
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			myRotation = glm::rotate(myRotation, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		}else{	
+			myRotation = glm::rotate(myRotation, glm::radians(rotationAngleYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS){
+		rotationAnglePitch = 1;
+
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			myRotation = glm::rotate(myRotation, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		}else{
+			myRotation = glm::rotate(myRotation, glm::radians(rotationAnglePitch), glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS){
+		rotationAnglePitch = -1;
+
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			myRotation = glm::rotate(myRotation, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		}else{
+			myRotation = glm::rotate(myRotation, glm::radians(rotationAnglePitch), glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS){
+		rotationAngleRoll = 1;
+
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			myRotation = glm::rotate(myRotation, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		}else{
+			myRotation = glm::rotate(myRotation, glm::radians(rotationAngleRoll), glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS){
+		rotationAngleRoll = -1;
+
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			myRotation = glm::rotate(myRotation, glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		}else{
+			myRotation = glm::rotate(myRotation, glm::radians(rotationAngleRoll), glm::vec3(0.0f, 0.0f, 1.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+		translationY = 0.1;
+
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			//This is actually a Z translation. Just using the Y value
+			myTranslation = glm::translate(myTranslation, glm::vec3(0.0f, 0.0f, translationY));
+		}else{
+			myTranslation = glm::translate(myTranslation, glm::vec3(0.0f, translationY, 0.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+		translationY = -0.1;
+		
+		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+			//This is actually a Z translation. Just using the Y value
+			myTranslation = glm::translate(myTranslation, glm::vec3(0.0f, 0.0f, translationY));
+		}else{
+			myTranslation = glm::translate(myTranslation, glm::vec3(0.0f, translationY, 0.0f));
+		}
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+		translationX =  -0.1;
+		myTranslation = glm::translate(myTranslation, glm::vec3(translationX, 0.0f, 0.0f));
+	}
+
+	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+		translationX = 0.1;
+		myTranslation = glm::translate(myTranslation, glm::vec3(translationX, 0.0f, 0.0f));
+	}
+
+	myTotalTransformation = myRotation * myTranslation;
+}
+
+void Model::loadMesh(unsigned int indMesh){
 	// Get all accessor indices
 	unsigned int posAccInd = JSON["meshes"][indMesh]["primitives"][0]["attributes"]["POSITION"];
 	unsigned int normalAccInd = JSON["meshes"][indMesh]["primitives"][0]["attributes"]["NORMAL"];
@@ -48,24 +151,22 @@ void Model::loadMesh(unsigned int indMesh)
 	meshes.push_back(Mesh(vertices, indices, textures));
 }
 
-void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix)
-{
+void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix){
 	// Current node
 	json node = JSON["nodes"][nextNode];
 
 	// Get translation if it exists
 	glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
-	if (node.find("translation") != node.end())
-	{
+	if(node.find("translation") != node.end()){
 		float transValues[3];
 		for (unsigned int i = 0; i < node["translation"].size(); i++)
 			transValues[i] = (node["translation"][i]);
 		translation = glm::make_vec3(transValues);
 	}
+
 	// Get quaternion if it exists
 	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-	if (node.find("rotation") != node.end())
-	{
+	if(node.find("rotation") != node.end()){
 		float rotValues[4] =
 		{
 			node["rotation"][3],
@@ -75,19 +176,19 @@ void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix)
 		};
 		rotation = glm::make_quat(rotValues);
 	}
+
 	// Get scale if it exists
 	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
-	if (node.find("scale") != node.end())
-	{
+	if(node.find("scale") != node.end()){
 		float scaleValues[3];
 		for (unsigned int i = 0; i < node["scale"].size(); i++)
 			scaleValues[i] = (node["scale"][i]);
 		scale = glm::make_vec3(scaleValues);
 	}
+
 	// Get matrix if it exists
 	glm::mat4 matNode = glm::mat4(1.0f);
-	if (node.find("matrix") != node.end())
-	{
+	if(node.find("matrix") != node.end()){
 		float matValues[16];
 		for (unsigned int i = 0; i < node["matrix"].size(); i++)
 			matValues[i] = (node["matrix"][i]);
@@ -108,26 +209,22 @@ void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix)
 	glm::mat4 matNextNode = matrix * matNode * trans * rot * sca;
 
 	// Check if the node contains a mesh and if it does load it
-	if (node.find("mesh") != node.end())
-	{
+	if(node.find("mesh") != node.end()){
 		translationsMeshes.push_back(translation);
 		rotationsMeshes.push_back(rotation);
 		scalesMeshes.push_back(scale);
 		matricesMeshes.push_back(matNextNode);
-
 		loadMesh(node["mesh"]);
 	}
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
-	if (node.find("children") != node.end())
-	{
+	if(node.find("children") != node.end()){
 		for (unsigned int i = 0; i < node["children"].size(); i++)
 			traverseNode(node["children"][i], matNextNode);
 	}
 }
 
-std::vector<unsigned char> Model::getData()
-{
+std::vector<unsigned char> Model::getData(){
 	// Create a place to store the raw text, and get the uri of the .bin file
 	std::string bytesText;
 	std::string uri = JSON["buffers"][0]["uri"];
@@ -142,8 +239,7 @@ std::vector<unsigned char> Model::getData()
 	return data;
 }
 
-std::vector<float> Model::getFloats(json accessor)
-{
+std::vector<float> Model::getFloats(json accessor){
 	std::vector<float> floatVec;
 
 	// Get properties from the accessor
@@ -167,19 +263,16 @@ std::vector<float> Model::getFloats(json accessor)
 	// Go over all the bytes in the data at the correct place using the properties from above
 	unsigned int beginningOfData = byteOffset + accByteOffset;
 	unsigned int lengthOfData = count * 4 * numPerVert;
-	for (unsigned int i = beginningOfData; i < beginningOfData + lengthOfData; i)
-	{
+	for (unsigned int i = beginningOfData; i < beginningOfData + lengthOfData; i){
 		unsigned char bytes[] = { data[i++], data[i++], data[i++], data[i++] };
 		float value;
 		std::memcpy(&value, bytes, sizeof(float));
 		floatVec.push_back(value);
 	}
-
 	return floatVec;
 }
 
-std::vector<GLuint> Model::getIndices(json accessor)
-{
+std::vector<GLuint> Model::getIndices(json accessor){
 	std::vector<GLuint> indices;
 
 	// Get properties from the accessor
@@ -193,19 +286,15 @@ std::vector<GLuint> Model::getIndices(json accessor)
 	unsigned int byteOffset = bufferView.value("byteOffset", 0);
 
 	// Get indices with regards to their type: unsigned int, unsigned short, or short
-	unsigned int beginningOfData = byteOffset + accByteOffset;
-	if (componentType == 5125)
-	{
-		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i)
-		{
+	unsigned int beginningOfData = byteOffset + accByteOffset;	
+	if(componentType == 5125){
+		for(unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 4; i){
 			unsigned char bytes[] = { data[i++], data[i++], data[i++], data[i++] };
 			unsigned int value;
 			std::memcpy(&value, bytes, sizeof(unsigned int));
 			indices.push_back((GLuint)value);
 		}
-	}
-	else if (componentType == 5123)
-	{
+	}else if(componentType == 5123){
 		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
 		{
 			unsigned char bytes[] = { data[i++], data[i++] };
@@ -213,40 +302,32 @@ std::vector<GLuint> Model::getIndices(json accessor)
 			std::memcpy(&value, bytes, sizeof(unsigned short));
 			indices.push_back((GLuint)value);
 		}
-	}
-	else if (componentType == 5122)
-	{
-		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i)
-		{
+	}else if(componentType == 5122){
+		for (unsigned int i = beginningOfData; i < byteOffset + accByteOffset + count * 2; i){
 			unsigned char bytes[] = { data[i++], data[i++] };
 			short value;
 			std::memcpy(&value, bytes, sizeof(short));
 			indices.push_back((GLuint)value);
 		}
 	}
-
 	return indices;
 }
 
-std::vector<Texture> Model::getTextures()
-{
+std::vector<Texture> Model::getTextures(){
 	std::vector<Texture> textures;
 
 	std::string fileStr = std::string(file);
 	std::string fileDirectory = fileStr.substr(0, fileStr.find_last_of('/') + 1);
 
 	// Go over all images
-	for (unsigned int i = 0; i < JSON["images"].size(); i++)
-	{
+	for (unsigned int i = 0; i < JSON["images"].size(); i++){
 		// uri of current texture
 		std::string texPath = JSON["images"][i]["uri"];
 
 		// Check if the texture has already been loaded
 		bool skip = false;
-		for (unsigned int j = 0; j < loadedTexName.size(); j++)
-		{
-			if (loadedTexName[j] == texPath)
-			{
+		for(unsigned int j = 0; j < loadedTexName.size(); j++){
+			if(loadedTexName[j] == texPath){
 				textures.push_back(loadedTex[j]);
 				skip = true;
 				break;
@@ -254,19 +335,15 @@ std::vector<Texture> Model::getTextures()
 		}
 
 		// If the texture has been loaded, skip this
-		if (!skip)
-		{
-			// Load diffuse texture
-			if (texPath.find("baseColor") != std::string::npos)
-			{
+		if (!skip){
+			if (texPath.find("baseColor") != std::string::npos){
+				// Load diffuse texture
 				Texture diffuse = Texture((fileDirectory + texPath).c_str(), "diffuse", loadedTex.size());
 				textures.push_back(diffuse);
 				loadedTex.push_back(diffuse);
 				loadedTexName.push_back(texPath);
-			}
-			// Load specular texture
-			else if (texPath.find("metallicRoughness") != std::string::npos)
-			{
+			}else if(texPath.find("metallicRoughness") != std::string::npos){
+				// Load specular texture
 				Texture specular = Texture((fileDirectory + texPath).c_str(), "specular", loadedTex.size());
 				textures.push_back(specular);
 				loadedTex.push_back(specular);
@@ -274,18 +351,14 @@ std::vector<Texture> Model::getTextures()
 			}
 		}
 	}
-
 	return textures;
 }
 
 std::vector<Vertex> Model::assembleVertices(std::vector<glm::vec3> positions, std::vector<glm::vec3> normals, std::vector<glm::vec2> texUVs){
 	std::vector<Vertex> vertices;
-	for (int i = 0; i < positions.size(); i++)
-	{
-		vertices.push_back
-		(
-			Vertex
-			{
+	for (int i = 0; i < positions.size(); i++){
+		vertices.push_back(
+			Vertex{
 				positions[i],
 				normals[i],
 				glm::vec3(1.0f, 1.0f, 1.0f),
@@ -298,8 +371,7 @@ std::vector<Vertex> Model::assembleVertices(std::vector<glm::vec3> positions, st
 
 std::vector<glm::vec2> Model::groupFloatsVec2(std::vector<float> floatVec){
 	std::vector<glm::vec2> vectors;
-	for (int i = 0; i < floatVec.size(); i)
-	{
+	for (int i = 0; i < floatVec.size(); i){
 		vectors.push_back(glm::vec2(floatVec[i++], floatVec[i++]));
 	}
 	return vectors;
@@ -307,8 +379,7 @@ std::vector<glm::vec2> Model::groupFloatsVec2(std::vector<float> floatVec){
 
 std::vector<glm::vec3> Model::groupFloatsVec3(std::vector<float> floatVec){
 	std::vector<glm::vec3> vectors;
-	for (int i = 0; i < floatVec.size(); i)
-	{
+	for (int i = 0; i < floatVec.size(); i){
 		vectors.push_back(glm::vec3(floatVec[i++], floatVec[i++], floatVec[i++]));
 	}
 	return vectors;
@@ -316,9 +387,73 @@ std::vector<glm::vec3> Model::groupFloatsVec3(std::vector<float> floatVec){
 
 std::vector<glm::vec4> Model::groupFloatsVec4(std::vector<float> floatVec){
 	std::vector<glm::vec4> vectors;
-	for (int i = 0; i < floatVec.size(); i)
-	{
+	for (int i = 0; i < floatVec.size(); i){
 		vectors.push_back(glm::vec4(floatVec[i++], floatVec[i++], floatVec[i++], floatVec[i++]));
 	}
 	return vectors;
+}
+
+void Model::findBindingBox(){
+	for(unsigned int i = 0; i < meshes.size(); i++){
+		for(unsigned int j = 0; j < meshes[i].vertices.size(); j++){
+			if(meshes[i].vertices[j].position.x < minX) minX = meshes[i].vertices[j].position.x;
+			if(meshes[i].vertices[j].position.y < minY) minY = meshes[i].vertices[j].position.y;
+			if(meshes[i].vertices[j].position.z < minZ) minZ = meshes[i].vertices[j].position.z;
+
+			if(meshes[i].vertices[j].position.x > maxX) maxX = meshes[i].vertices[j].position.x;
+			if(meshes[i].vertices[j].position.y > maxY) maxY = meshes[i].vertices[j].position.y;
+			if(meshes[i].vertices[j].position.z > minZ) maxZ = meshes[i].vertices[j].position.z;
+		}
+	}
+}
+
+
+void Model::computeCenter(){
+	centerX = (minX + maxX)/2;
+	centerY = (minY + maxY)/2;
+	centerZ = (minZ + maxZ)/2;
+}
+
+void Model::computeSize(){
+	sizeX = maxX - minX;
+	sizeY = maxY - minY;
+	sizeZ = maxZ - minZ;
+}
+
+void Model::drawBoundingBox(Shader& shader, Camera& camera){
+	std::vector<Vertex> vertices;
+
+	vertices.push_back(Vertex{glm::vec3(minX, minY, minZ)});
+	vertices.push_back(Vertex{glm::vec3(maxX, minY, minZ)});
+	vertices.push_back(Vertex{glm::vec3(maxX, maxY, minZ)});
+	vertices.push_back(Vertex{glm::vec3(minX, maxY, minZ)});
+	vertices.push_back(Vertex{glm::vec3(minX, minY, maxZ)});
+	vertices.push_back(Vertex{glm::vec3(maxX, minY, maxZ)});
+	vertices.push_back(Vertex{glm::vec3(maxX, maxY, maxZ)});
+	vertices.push_back(Vertex{glm::vec3(minX, maxY, maxZ)});
+
+	std::vector<GLuint> indices = {	0, 1, 3,
+									1, 3, 2,
+									//Left Side
+									0, 4, 3,
+									4, 3, 7,
+									//Right Side
+									1, 5, 2,
+									5, 2, 6,
+									//Back Side
+									5, 4, 7,
+									5, 7, 6,
+									//Top Side
+									3, 2, 7,
+									2, 7, 6,
+									//Bottom Side
+									0, 1, 4,
+									1, 4, 5};
+
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "myTotalTransformation"), 1, GL_FALSE, glm::value_ptr(myTotalTransformation));
+	std::vector<Texture> textures;
+	Mesh boundingBox = Mesh(vertices, indices, textures);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	boundingBox.Draw(shader, camera, glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(0.0f, 1.0f, 0.0f, 0.0f), glm::vec3(modelScale, modelScale, modelScale));
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

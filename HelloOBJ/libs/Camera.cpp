@@ -18,7 +18,6 @@ void Camera::updateMatrix(float FOVdeg, float nearPlane, float farPlane){
 
 
 void Camera::Matrix(Shader &shader, const char* uniform){
-
     glUniformMatrix4fv(glGetUniformLocation(shader.ID, uniform), 1, GL_FALSE, glm::value_ptr(cameraMatrix));
 }
 
@@ -43,7 +42,6 @@ void Camera::Inputs(GLFWwindow* window){
 		Position = glm::vec3(0.0f, 0.0f, 2.0f);
 		Orientation = glm::vec3(0.0f, 0.0f, -1.0f);
 	}
-
 
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
 		Position += speed * Up;

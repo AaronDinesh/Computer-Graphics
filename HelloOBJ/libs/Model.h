@@ -2,7 +2,9 @@
 #define MODEL_CLASS_H
 
 #include <nlohmann/json.hpp>
-#include"Mesh.h"
+#include <glm/gtx/string_cast.hpp>
+#include "Mesh.h"
+
 
 using json = nlohmann::json;
 
@@ -10,17 +12,6 @@ using json = nlohmann::json;
 class Model
 {
 public:
-	// Loads in a model from a file and stores tha information in 'data', 'JSON', and 'file'
-	Model(const char* file);
-
-	void Draw(Shader& shader, Camera& camera);
-
-private:
-	// Variables for easy access
-	const char* file;
-	std::vector<unsigned char> data;
-	json JSON;
-
 	// All the meshes and transformations
 	std::vector<Mesh> meshes;
 	std::vector<glm::vec3> translationsMeshes;
@@ -31,6 +22,36 @@ private:
 	// Prevents textures from being loaded twice
 	std::vector<std::string> loadedTexName;
 	std::vector<Texture> loadedTex;
+
+
+	int oldLeftShiftState = GLFW_RELEASE; 
+	float rotationAngleYaw, rotationAnglePitch, rotationAngleRoll = 0;
+	float translationX, translationY, translationZ = 0;
+	float minX, minY, minZ, maxX, maxY, maxZ = 0.0f;
+	float centerX, centerY, centerZ = 0.0f;
+	float sizeX, sizeY, sizeZ = 0.0f;
+	float modelScale;
+	glm::mat4 combinedModelMatrix = glm::mat4(1.0f);
+
+	glm::mat4 initModelMatrix = glm::mat4(1.0f);
+	glm::mat4 myRotation = glm::mat4(1.0f);
+	glm::mat4 myTranslation = glm::mat4(1.0f);
+	glm::mat4 myTotalTransformation = glm::mat4(1.0f);
+
+	// Loads in a model from a file and stores tha information in 'data', 'JSON', and 'file'
+	Model(const char* file, float scale, glm::mat4 initTransform = glm::mat4(1.0f));
+
+	void Draw(Shader& shader, Camera& camera);
+	void handleKeyboardInputs(GLFWwindow* window, Shader& shader);
+	void drawBoundingBox(Shader& shader, Camera& camera);
+
+private:
+	// Variables for easy access
+	const char* file;
+	std::vector<unsigned char> data;
+	json JSON;
+
+
 
 	// Loads a single mesh by its index
 	void loadMesh(unsigned int indMesh);
@@ -57,5 +78,9 @@ private:
 	std::vector<glm::vec2> groupFloatsVec2(std::vector<float> floatVec);
 	std::vector<glm::vec3> groupFloatsVec3(std::vector<float> floatVec);
 	std::vector<glm::vec4> groupFloatsVec4(std::vector<float> floatVec);
+
+	void findBindingBox();
+	void computeCenter();
+	void computeSize();
 };
 #endif

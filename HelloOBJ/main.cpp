@@ -21,22 +21,43 @@ int HEIGHT = 1080;
 int main(){
     GLFWwindow* window = glINIT(WIDTH, HEIGHT);
 
-    Shader shaderProgram("Shaders/default.vert","Shaders/default.frag");
+    Shader roadShader("Shaders/default.vert","Shaders/default.frag");
+    Shader tower1Shader("Shaders/default.vert","Shaders/default.frag");
+    Shader tower2Shader("Shaders/default.vert","Shaders/default.frag");
+
 
     glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     glm::vec3 lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
     glm::mat4 lightModel = glm::mat4(1.0f);
     lightModel = glm::translate(lightModel, lightPos);
 
-    shaderProgram.Activate();
-    glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-    glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+    roadShader.Activate();
+    glUniform4f(glGetUniformLocation(roadShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(roadShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
+    tower1Shader.Activate();
+    glUniform4f(glGetUniformLocation(tower1Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(tower1Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
+    tower2Shader.Activate();
+    glUniform4f(glGetUniformLocation(tower2Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(tower2Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
 
     glEnable(GL_DEPTH_TEST);
 
-    Camera camera(WIDTH, HEIGHT, glm::vec3(0.0f, 0.0f, 6.0f));
+    Camera camera(WIDTH, HEIGHT, glm::vec3(0.0f, 0.0f, 10.0f));
 
-    Model adam("Objects/hat/scene.gltf");
+    //90 aboutz
+    glm::mat4 initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    Model road("Objects/road/scene.gltf", 0.01, initTransform);
+    initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    initTransform = glm::translate(initTransform, glm::vec3(-3.2f, 3.0f, 0.0f));
+    Model tower1("Objects/tower/scene.gltf", 0.2, initTransform);
+
+    initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    initTransform = glm::translate(initTransform, glm::vec3(-3.2f, -3.0f, 0.0f));
+    Model tower2("Objects/tower/scene.gltf", 0.2, initTransform);
 
     while(!glfwWindowShouldClose(window)){
         glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -44,13 +65,19 @@ int main(){
 
         camera.Inputs(window);
         camera.updateMatrix(45.0f, 0.1f, 100.0f);
-        shaderProgram.Activate();
-        adam.Draw(shaderProgram, camera);
+        
+        road.Draw(roadShader, camera);        
+        tower1.Draw(tower1Shader, camera);
+        tower2.Draw(tower2Shader, camera);
+        tower2.handleKeyboardInputs(window, tower2Shader);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    shaderProgram.Delete();
+    roadShader.Delete();
+    tower1Shader.Delete();
+    tower2Shader.Delete();
     glfwTerminate();
     return 0;
 }
