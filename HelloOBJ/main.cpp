@@ -7,19 +7,63 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <dlfcn.h>
 
 #include "libs/Mesh.h"
 #include "libs/Model.h"
-
-
+#include "libs/miniaudio.h"
 
 GLFWwindow* glINIT(int WIDTH, int HEIGHT);
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
+
 
 int WIDTH = 1920;
 int HEIGHT = 1080;
 
+
+
 int main(){
+    //Defining audio context
+    ma_result result;
+    ma_decoder decoder;
+    ma_device_config deviceConfig;
+    ma_device device;
+
+    result = ma_decoder_init_file("Sounds/Circus.mp3", NULL, &decoder);
+
+    if(result != MA_SUCCESS){
+        std::cout << ma_result_description(result) << std::endl;
+        return -1;
+    }
+
+    ma_data_source_set_looping(&decoder, MA_TRUE);
+
+    deviceConfig = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format   = decoder.outputFormat;
+    deviceConfig.playback.channels = decoder.outputChannels;
+    deviceConfig.sampleRate        = decoder.outputSampleRate;
+    deviceConfig.dataCallback      = data_callback;
+    deviceConfig.pUserData         = &decoder;
+    deviceConfig.periodSizeInMilliseconds = 200;
+
+    result = ma_device_init(NULL, &deviceConfig, &device);
+
+    if(result != MA_SUCCESS){
+        std::cout << ma_result_description(result) << std::endl;
+        return -1;
+    }
+
+    result = ma_device_start(&device);
+    
+    if(result != MA_SUCCESS){
+        std::cout << ma_result_description(result) << std::endl;
+        return -1;
+    }
+
+
+
     GLFWwindow* window = glINIT(WIDTH, HEIGHT);
+    glm::vec2 resVec = glm::vec2(WIDTH, HEIGHT);
 
     Shader roadShader("Shaders/default.vert","Shaders/default.frag");
     Shader tower1Shader("Shaders/default.vert","Shaders/default.frag");
@@ -49,32 +93,53 @@ int main(){
     Camera camera(WIDTH, HEIGHT, glm::vec3(0.0f, 0.0f, 10.0f));
 
     //90 aboutz
-    glm::mat4 initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(270.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    Model road("Objects/road/scene.gltf", 0.01, initTransform);
-    initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 initTransform = glm::mat4(1.0f);
+    initTransform = glm::rotate(initTransform, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    Model road("Objects/FinalScene/scene.gltf", 4.0f, initTransform);
+    
+    
+    initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     initTransform = glm::translate(initTransform, glm::vec3(-3.2f, 3.0f, 0.0f));
-    Model tower1("Objects/tower/scene.gltf", 0.2, initTransform);
+    Model tower1("Objects/lowpolybuilding/scene.gltf", 0.2, initTransform);
 
     initTransform = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     initTransform = glm::translate(initTransform, glm::vec3(-3.2f, -3.0f, 0.0f));
-    Model tower2("Objects/tower/scene.gltf", 0.2, initTransform);
+    Model tower2("Objects/lowpolybuilding/scene.gltf", 0.2, initTransform);
+
+    glm::vec3 fogColor = glm::vec3(0.07f, 0.13f, 0.17f);
 
     while(!glfwWindowShouldClose(window)){
-        glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+        glClearColor(fogColor.x, 0.13f, 0.17f, 1.0f);
+
+        roadShader.Activate();
+        glUniform3f(glGetUniformLocation(roadShader.ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
+
+        tower1Shader.Activate();
+        glUniform3f(glGetUniformLocation(tower1Shader.ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
+
+        tower2Shader.Activate();
+        glUniform3f(glGetUniformLocation(tower2Shader.ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         camera.Inputs(window);
         camera.updateMatrix(45.0f, 0.1f, 100.0f);
         
-        road.Draw(roadShader, camera);        
-        tower1.Draw(tower1Shader, camera);
-        tower2.Draw(tower2Shader, camera);
+        //Perhaps Preetham Sky model on GL_CLEAR_COLOR ???
+
+
+        road.Draw(roadShader, camera, resVec);        
+        tower1.Draw(tower1Shader, camera, resVec);
+        tower2.Draw(tower2Shader, camera, resVec);
         tower2.handleKeyboardInputs(window, tower2Shader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+
+    ma_device_uninit(&device);
+    ma_decoder_uninit(&decoder);
     roadShader.Delete();
     tower1Shader.Delete();
     tower2Shader.Delete();
@@ -106,4 +171,16 @@ GLFWwindow* glINIT(int WIDTH, int HEIGHT){
     glViewport(0, 0, WIDTH, HEIGHT);
 
     return window;
+}
+
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount){
+    ma_decoder* pDecoder = (ma_decoder*) pDevice->pUserData;
+
+    if(!pDecoder){
+        return;
+    }
+
+    ma_data_source_read_pcm_frames(pDecoder, pOutput, frameCount, NULL);
+
+    (void)pInput;
 }

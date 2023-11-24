@@ -1,0 +1,11 @@
+Model Information:
+* title:	old brick warehouse
+* source:	https://sketchfab.com/3d-models/old-brick-warehouse-e472f3da03e0420e8d008cf7951d34f6
+* author:	Pinos (https://sketchfab.com/PauloWardson)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "old brick warehouse" (https://sketchfab.com/3d-models/old-brick-warehouse-e472f3da03e0420e8d008cf7951d34f6) by Pinos (https://sketchfab.com/PauloWardson) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

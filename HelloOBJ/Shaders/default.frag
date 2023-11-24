@@ -1,16 +1,30 @@
 #version 330 core
+#define PI 3.14159265359
+
 out vec4 FragColor;
 in vec3 color;
 in vec2 texCoords;
 in vec3 Normal;
 in vec3 crntPosition;
+in vec4 vertloc;
 
 uniform sampler2D diffuse0;
 uniform sampler2D specular0;
 uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 camPos;
+uniform vec2 iResolution;
+uniform float iTime;
+uniform vec3 skyColor;
 
+const float density = 0.07;
+const float gradient = 1.5;
+
+float fog(){
+    float distance = distance(vertloc.xyz, camPos.xyz);
+    float visibility = clamp(exp(-pow((distance*density), gradient)), 0.0, 1.0);
+    return visibility;
+}
 
 vec4 pointLight(){
     vec3 lightVec = lightPosition - crntPosition;
@@ -100,5 +114,6 @@ vec4 returnSpecularTexture(){
 
 
 void main(){
-    FragColor = directionalLight();
+    vec4 lighting = directionalLight();
+    FragColor = mix(vec4(skyColor, 1.0f), lighting, fog());
 };
