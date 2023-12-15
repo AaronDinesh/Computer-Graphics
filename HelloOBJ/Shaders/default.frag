@@ -1,6 +1,12 @@
 #version 330 core
 #define PI 3.14159265359
 
+
+struct Light{
+    vec3 lightPosition;
+    vec4 lightColor;
+};
+
 out vec4 FragColor;
 in vec3 color;
 in vec2 texCoords;
@@ -33,7 +39,7 @@ vec4 pointLight(){
     float b = 1;
     float intensity = 1.0f/(a*lightDist*lightDist + b*lightDist + 1.0f);
 
-    float ambient = 0.01f;
+    float ambient = 0.20f;
     vec3 normal = normalize(Normal);
     vec3 lightDirection = normalize(lightVec);
 
@@ -115,5 +121,7 @@ vec4 returnSpecularTexture(){
 
 void main(){
     vec4 lighting = directionalLight();
-    FragColor = mix(vec4(skyColor, 1.0f), lighting, fog());
+    float visibility = fog();
+    //float visibility = 1.0;
+    FragColor = mix(vec4(skyColor, 1.0f), lighting, visibility);
 };

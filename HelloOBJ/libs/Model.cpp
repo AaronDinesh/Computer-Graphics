@@ -1,10 +1,9 @@
 #include"Model.h"
 
-Model::Model(const char* file, float scale, glm::mat4 initTransform){
+Model::Model(const char* file, glm::vec3 scale, glm::mat4 initTransform, bool should_compute_center){
 	// Make a JSON object
 	std::string text = get_file_contents(file);
 	JSON = json::parse(text);
-	initModelMatrix = initTransform;
 
 	// Get the binary data
 	Model::file = file;
@@ -13,23 +12,45 @@ Model::Model(const char* file, float scale, glm::mat4 initTransform){
 
 	// Traverse all nodes
 	traverseNode(0);
-	findBindingBox();
-	computeCenter();
+
+	initTransformMat = initTransform;
+	compute_center = should_compute_center;
+	if(compute_center){
+		findBindingBox();
+		computeCenter();
+		glm::vec4 transformedCenter = initTransform * myTotalTransformation * glm::scale(glm::mat4(1.0f), scale) * matricesMeshes[0] * glm::vec4(glm::vec3(centerX, centerY, centerZ), 1.0f);
+		centerX = transformedCenter.x;
+		centerY = transformedCenter.y;
+		centerZ = transformedCenter.z;
+	}
 }
 
-void Model::Draw(Shader& shader, Camera& camera, glm::vec2 screenResolution){
-	// Go over all meshes and draw each one
+void Model::Draw(Shader& shader, Camera& camera, glm::vec2 screenResolution, glm::vec3 translation){
+	//Draw all meshes
 	for(unsigned int i = 0; i < meshes.size(); i++){
-		//meshes[i].Mesh::Draw(shader, camera, matricesMeshes[i]);
 		shader.Activate();
+		//This is to pass the the screen resolution and the current time into the shader
+		//for potential animation purposes.
 		glUniform2f(glGetUniformLocation(shader.ID, "iResolution"), screenResolution.x, screenResolution.y);
 		glUniform1f(glGetUniformLocation(shader.ID, "iTime"), glfwGetTime());
+
+		//Pass the transformation matrix re
 		glUniformMatrix4fv(glGetUniformLocation(shader.ID, "myTotalTransformation"), 1, GL_FALSE, glm::value_ptr(myTotalTransformation));
-		meshes[i].Mesh::Draw(shader, camera, initModelMatrix, glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(modelScale, modelScale, modelScale));
+		glUniformMatrix4fv(glGetUniformLocation(shader.ID, "initTransform"), 1, GL_FALSE, glm::value_ptr(initTransformMat));
+		meshes[i].Mesh::Draw(shader, camera, matricesMeshes[i], translation, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), modelScale);
+	}
+
+	if(compute_center){
+		glm::vec4 transformedCenter = initTransformMat * myTotalTransformation * glm::scale(glm::mat4(1.0f), modelScale) * matricesMeshes[0] * glm::vec4(glm::vec3(centerX, centerY, centerZ), 1.0f);
+		centerX = transformedCenter.x;
+		centerY = transformedCenter.y;
+		centerZ = transformedCenter.z;
 	}
 }
 
 void Model::handleKeyboardInputs(GLFWwindow* window, Shader& shader){
+	
+	//Reset all the rotation and the translations done.
 	if(glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS){
 		myRotation = myRotation * glm::inverse(myRotation);
 		myTranslation = myTranslation * glm::inverse(myTranslation);
@@ -129,35 +150,47 @@ void Model::handleKeyboardInputs(GLFWwindow* window, Shader& shader){
 	myTotalTransformation = myRotation * myTranslation;
 }
 
-void Model::loadMesh(unsigned int indMesh){
+void Model::loadMesh(unsigned int indMesh, glm::mat4 modelMatrix, glm::vec3 translation, glm::quat rotation, glm::vec3 scale){
 	// Get all accessor indices
-	unsigned int posAccInd = JSON["meshes"][indMesh]["primitives"][0]["attributes"]["POSITION"];
-	unsigned int normalAccInd = JSON["meshes"][indMesh]["primitives"][0]["attributes"]["NORMAL"];
-	unsigned int texAccInd = JSON["meshes"][indMesh]["primitives"][0]["attributes"]["TEXCOORD_0"];
-	unsigned int indAccInd = JSON["meshes"][indMesh]["primitives"][0]["indices"];
 
-	// Use accessor indices to get all vertices components
-	std::vector<float> posVec = getFloats(JSON["accessors"][posAccInd]);
-	std::vector<glm::vec3> positions = groupFloatsVec3(posVec);
-	std::vector<float> normalVec = getFloats(JSON["accessors"][normalAccInd]);
-	std::vector<glm::vec3> normals = groupFloatsVec3(normalVec);
-	std::vector<float> texVec = getFloats(JSON["accessors"][texAccInd]);
-	std::vector<glm::vec2> texUVs = groupFloatsVec2(texVec);
+	for(int i = 0; i <  JSON["meshes"][indMesh]["primitives"].size(); i++){
+		unsigned int posAccInd    = JSON["meshes"][indMesh]["primitives"][i]["attributes"]["POSITION"];
+		unsigned int normalAccInd = JSON["meshes"][indMesh]["primitives"][i]["attributes"]["NORMAL"];
+		unsigned int texAccInd    = JSON["meshes"][indMesh]["primitives"][i]["attributes"]["TEXCOORD_0"];
+		unsigned int indAccInd    = JSON["meshes"][indMesh]["primitives"][i]["indices"];
 
-	// Combine all the vertex components and also get the indices and textures
-	std::vector<Vertex> vertices = assembleVertices(positions, normals, texUVs);
-	std::vector<GLuint> indices = getIndices(JSON["accessors"][indAccInd]);
-	std::vector<Texture> textures = getTextures();
+		// Use accessor indices to get all vertices components
+		std::vector<float> posVec        = getFloats(JSON["accessors"][posAccInd]);
+		std::vector<glm::vec3> positions = groupFloatsVec3(posVec);
+		std::vector<float> normalVec     = getFloats(JSON["accessors"][normalAccInd]);
+		std::vector<glm::vec3> normals   = groupFloatsVec3(normalVec);
+		std::vector<float> texVec        = getFloats(JSON["accessors"][texAccInd]);
+		std::vector<glm::vec2> texUVs    = groupFloatsVec2(texVec);
 
-	// Combine the vertices, indices, and textures into a mesh
-	meshes.push_back(Mesh(vertices, indices, textures));
+		// Combine all the vertex components and also get the indices and textures
+		std::vector<Vertex> vertices  = assembleVertices(positions, normals, texUVs);
+		std::vector<GLuint> indices   = getIndices(JSON["accessors"][indAccInd]);
+		std::vector<Texture> textures = getTextures();
+
+		// Combine the vertices, indices, and textures into a mesh
+		meshes.push_back(Mesh(vertices, indices, textures));
+	
+		//If there is more than one primitive, I push the same modelMatrix for that primitive
+		//this is fine since it should all be part of the same mesh.
+		if(i >= 1){
+			matricesMeshes.push_back(modelMatrix);
+			translationsMeshes.push_back(translation);
+			rotationsMeshes.push_back(rotation);
+			scalesMeshes.push_back(scale);
+		}
+	}
 }
 
 void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix){
-	// Current node
+	//This is the current node
 	json node = JSON["nodes"][nextNode];
 
-	// Get translation if it exists
+	//We get the translation stored at that node
 	glm::vec3 translation = glm::vec3(0.0f, 0.0f, 0.0f);
 	if(node.find("translation") != node.end()){
 		float transValues[3];
@@ -166,7 +199,7 @@ void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix){
 		translation = glm::make_vec3(transValues);
 	}
 
-	// Get quaternion if it exists
+	//We get the quaternion at that node
 	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 	if(node.find("rotation") != node.end()){
 		float rotValues[4] =
@@ -179,7 +212,7 @@ void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix){
 		rotation = glm::make_quat(rotValues);
 	}
 
-	// Get scale if it exists
+	//We get the scale at that node
 	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
 	if(node.find("scale") != node.end()){
 		float scaleValues[3];
@@ -188,7 +221,7 @@ void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix){
 		scale = glm::make_vec3(scaleValues);
 	}
 
-	// Get matrix if it exists
+	//We get the matrix at that node
 	glm::mat4 matNode = glm::mat4(1.0f);
 	if(node.find("matrix") != node.end()){
 		float matValues[16];
@@ -197,26 +230,26 @@ void Model::traverseNode(unsigned int nextNode, glm::mat4 matrix){
 		matNode = glm::make_mat4(matValues);
 	}
 
-	// Initialize matrices
 	glm::mat4 trans = glm::mat4(1.0f);
 	glm::mat4 rot = glm::mat4(1.0f);
 	glm::mat4 sca = glm::mat4(1.0f);
 
-	// Use translation, rotation, and scale to change the initialized matrices
+	//We convert the vec3, quats and floats got from the node
+	//into a mat4
 	trans = glm::translate(trans, translation);
 	rot = glm::mat4_cast(rotation);
 	sca = glm::scale(sca, scale);
 
-	// Multiply all matrices together
+	//Get the meshMatrix
 	glm::mat4 matNextNode = matrix * matNode * trans * rot * sca;
 
-	// Check if the node contains a mesh and if it does load it
+	//Load the mesh
 	if(node.find("mesh") != node.end()){
 		translationsMeshes.push_back(translation);
 		rotationsMeshes.push_back(rotation);
 		scalesMeshes.push_back(scale);
 		matricesMeshes.push_back(matNextNode);
-		loadMesh(node["mesh"]);
+		loadMesh(node["mesh"], matNextNode, translation, rotation, scale);
 	}
 
 	// Check if the node has children, and if it does, apply this function to them with the matNextNode
@@ -395,6 +428,7 @@ std::vector<glm::vec4> Model::groupFloatsVec4(std::vector<float> floatVec){
 	return vectors;
 }
 
+
 void Model::findBindingBox(){
 	for(unsigned int i = 0; i < meshes.size(); i++){
 		for(unsigned int j = 0; j < meshes[i].vertices.size(); j++){
@@ -408,7 +442,6 @@ void Model::findBindingBox(){
 		}
 	}
 }
-
 
 void Model::computeCenter(){
 	centerX = (minX + maxX)/2;
@@ -456,6 +489,6 @@ void Model::drawBoundingBox(Shader& shader, Camera& camera){
 	std::vector<Texture> textures;
 	Mesh boundingBox = Mesh(vertices, indices, textures);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	boundingBox.Draw(shader, camera, glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(0.0f, 1.0f, 0.0f, 0.0f), glm::vec3(modelScale, modelScale, modelScale));
+	boundingBox.Draw(shader, camera, glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::quat(0.0f, 1.0f, 0.0f, 0.0f), modelScale);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

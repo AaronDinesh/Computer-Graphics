@@ -16,14 +16,14 @@ uniform mat4 translation;
 uniform mat4 rotation;
 uniform mat4 scale;
 uniform mat4 myTotalTransformation;
-
+uniform mat4 initTransform;
 
 
 void main(){
-  crntPosition = vec3(model * translation * rotation * myTotalTransformation * scale * vec4(aPos, 1.0f));
+  crntPosition = vec3(initTransform * translation * rotation * myTotalTransformation * scale * model * vec4(aPos, 1.0f));
   color = aColor;
   texCoords = mat2(0.0, -1.0, 1.0, 0.0) * aTex;
-  Normal = aNormal;
+  Normal = vec3(normalize(model * initTransform * myTotalTransformation * vec4(aNormal, 1.0)));
   gl_Position = camMatrix * vec4(crntPosition, 1.0);
 
   //This is the position of the point relative to the camera.

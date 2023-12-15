@@ -83,7 +83,12 @@ void Camera::Inputs(GLFWwindow* window){
 		glm::vec3 newOrientation = glm::rotate(Orientation, glm::radians(-rotX), glm::normalize(glm::cross(Orientation, Up)));
 
 		// Decides whether or not the next vertical Orientation is legal or not
-		if (abs(glm::angle(newOrientation, Up) - glm::radians(90.0f)) <= glm::radians(85.0f)){
+		// if (abs(glm::angle(newOrientation, Up) - glm::radians(90.0f)) <= glm::radians(85.0f)){
+		// 	Orientation = newOrientation;
+		// }
+
+		if (!((glm::angle(newOrientation, Up) <= glm::radians(35.0f)) or (glm::angle(newOrientation, Up) <= glm::radians(35.0f))))
+		{
 			Orientation = newOrientation;
 		}
 
@@ -98,4 +103,15 @@ void Camera::Inputs(GLFWwindow* window){
 		// Makes sure the next time the camera looks around it doesn't jump
 		firstClick = true;
 	}
+
+
+	// if((int) glfwGetTime() % 3 == 0){
+	// 	//Print out CamPos
+	// 	std::cout << "Camera Position: " << glm::to_string(Position) << std::endl; 
+	// }
+
+	//Clamp the position so that the camera doesn't go out of bounds.
+	Position.x = glm::clamp(Position.x, -74.500000f, 83.750000f);
+	Position.y = glm::clamp(Position.y, -18.750000f, MAXFLOAT);
+	Position.z = glm::clamp(Position.z, -83.800000f, 69.200000f);
 }

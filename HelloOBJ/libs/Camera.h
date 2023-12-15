@@ -8,6 +8,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/vector_angle.hpp>
+#include <glm/gtx/string_cast.hpp>
+#include <limits.h>
 
 #include "shaderClass.h"
 
@@ -23,9 +25,9 @@ class Camera{
         int screenHeight;
         bool firstClick;
 
-        float sensitivity = 1.0f;
-        const float L_SHIFT_SPEED = 0.1f;
-        const float NORM_SPEED = 0.01f;
+        float sensitivity = 5.0f;
+        const float L_SHIFT_SPEED = 0.5f;
+        const float NORM_SPEED = 0.25f;
         float speed = NORM_SPEED;
 
         Camera(int width, int height, glm::vec3 position);

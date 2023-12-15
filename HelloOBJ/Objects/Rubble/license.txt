@@ -1,0 +1,11 @@
+Model Information:
+* title:	Simple Wood Planks Debris Pack
+* source:	https://sketchfab.com/3d-models/simple-wood-planks-debris-pack-ed715e8d9c8745a091f094e3abdb1ff7
+* author:	Luka Feric (https://sketchfab.com/lferic)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Simple Wood Planks Debris Pack" (https://sketchfab.com/3d-models/simple-wood-planks-debris-pack-ed715e8d9c8745a091f094e3abdb1ff7) by Luka Feric (https://sketchfab.com/lferic) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
