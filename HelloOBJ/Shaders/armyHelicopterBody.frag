@@ -121,7 +121,7 @@ vec4 returnSpecularTexture(){
 
 void main(){
     vec4 lighting = directionalLight();
-    float visibility = fog();
-    //float visibility = 1.0;
+    //float visibility = fog();
+    float visibility = 1.0;
     FragColor = mix(vec4(skyColor, 1.0f), lighting, visibility);
 };

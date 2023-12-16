@@ -8,44 +8,55 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
+#include <glm/gtc/constants.hpp>
 #include <dlfcn.h>
 #include <time.h>
-
 
 #include "libs/Mesh.h"
 #include "libs/Model.h"
 #include "libs/miniaudio.h"
 
-GLFWwindow* glINIT(int WIDTH, int HEIGHT);
-void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
-
-int WIDTH = 1920;
-int HEIGHT = 1080;
 
 enum helicopterState{
     SPOOL_UP,
     LIFT_OFF,
-    FLYING
+    FLYING,
+    FLY_BACK,
+    LANDING,
+    SPOOL_DOWN,
+    SHUT_DOWN
 };
 
 struct helicopterObject{
-    enum helicopterState heliState;
+    enum helicopterState heliState = SHUT_DOWN;
     float offsetX = 0.0f;
     float offsetY = 0.0f;
     float offsetZ = 0.0f;
     float rotation = 0.0f;
     float MAX_ROTATION = 50.0f;
     float SPOOL_UP_TIME = 3.0f;
-    float MAX_HEIGHT = 10.0f;
+    float MAX_HEIGHT = 40.0f;
     float LIFT_OFF_TIME = 4.0f;
     float accumulatedTime = 0.0f;
     float randXMax = 20.0f;
     float randZMax = 20.0f;
     float randXFloat = 0.0f;
     float randZFloat = 0.0f;
-    float circularBounds = 20.0f;
+    float outerRadiusBound = 45.0f;
+    float innerRadiusBound = 5.0f;
     float heading = 0.0f;
+    float sceneCenterX = 0.0f;
+    float sceneCenterY = 0.0f;
+    float sceneCenterZ = 0.0f;
+
 };
+
+GLFWwindow* glINIT(int WIDTH, int HEIGHT);
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
+void calculate_helicopter_heading(struct helicopterObject* helicopter);
+
+int WIDTH = 1920;
+int HEIGHT = 1080;
 
 #define randFloat(a) (((rand()/(float) RAND_MAX)*a) - (a/2.0f))
 
@@ -126,7 +137,7 @@ int main(){
     glm::mat4 initTransform = glm::mat4(1.0f);
     initTransform = glm::rotate(initTransform, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     glm::vec3 scale = glm::vec3(4.0f, 4.0f, 4.0f);
-    Model baseScene("Objects/FinalSceneComplete/scene.gltf", scale, initTransform);
+    Model baseScene("Objects/FinalSceneComplete/scene.gltf", scale, initTransform, true);
     
 
     scale = glm::vec3(3.0f, 4.5f, 3.0f);
@@ -140,7 +151,6 @@ int main(){
 
     struct helicopterObject helicopter;
 
-    helicopter.heliState = FLYING;
     double prevTime = glfwGetTime();
     double x = 0.0f;
 
@@ -163,7 +173,11 @@ int main(){
         if(crntTime - prevTime >= 1/3600){
             switch(helicopter.heliState){
                 case SPOOL_UP:
-                    x += 3.0f/(helicopter.SPOOL_UP_TIME*250.0f);
+                    helicopter.sceneCenterX = baseScene.centerX;
+                    helicopter.sceneCenterY = baseScene.centerY;
+                    helicopter.sceneCenterZ = baseScene.centerZ;
+
+                    x += 3.0f/(helicopter.SPOOL_UP_TIME*50.0f);
                     helicopter.rotation += ((2.0f/(1.0f+glm::exp(-2.0f*x)))-1.0f)*helicopter.MAX_ROTATION;
                     prevTime = crntTime;
                     std::cout << "X: " << x << std::endl;
@@ -178,6 +192,10 @@ int main(){
 
                     if(helicopter.offsetY >= helicopter.MAX_HEIGHT){
                         helicopter.heliState = FLYING;
+                        helicopter.randXFloat = randFloat(helicopter.randXMax) / 125.0f;
+                        helicopter.randZFloat = randFloat(helicopter.randZMax) / 125.0f;
+
+                        calculate_helicopter_heading(&helicopter);
                     }
                     break;
                 case FLYING:
@@ -186,34 +204,87 @@ int main(){
                     helicopter.offsetZ += helicopter.randZFloat;
 
 
-                    if(helicopter.offsetX*helicopter.offsetX + helicopter.offsetZ*helicopter.offsetZ >= helicopter.circularBounds*helicopter.circularBounds){
-                        helicopter.offsetX -= 2*helicopter.randXFloat;
-                        helicopter.offsetZ -= 2*helicopter.randZFloat;
+                    if(glm::distance2(glm::vec2(helicopter.offsetX, helicopter.offsetZ), glm::vec2(helicopter.sceneCenterX, helicopter.sceneCenterZ)) >= helicopter.outerRadiusBound*helicopter.outerRadiusBound || glm::distance2(glm::vec2(helicopter.offsetX, helicopter.offsetZ), glm::vec2(helicopter.sceneCenterX, helicopter.sceneCenterZ)) <= helicopter.innerRadiusBound*helicopter.innerRadiusBound){
+                        helicopter.randXFloat = -helicopter.randXFloat;
+                        helicopter.randZFloat = helicopter.randZFloat;
+
+                        calculate_helicopter_heading(&helicopter);
                     }
 
                     helicopter.accumulatedTime += crntTime - prevTime;
-                    std::cout << helicopter.accumulatedTime << std::endl;
-                    if(helicopter.accumulatedTime >= 4.0f){
-                        helicopter.randXFloat = randFloat(helicopter.randXMax) / 125.0f;
-                        helicopter.randZFloat = randFloat(helicopter.randZMax) / 125.0f;
-                        helicopter.heading = glm::atan(helicopter.randXFloat/(helicopter.randZFloat+1e-4));
+                    if(helicopter.accumulatedTime >= 10.0f){
+                        helicopter.randXFloat = randFloat(helicopter.randXMax) / 64.0f;
+                        helicopter.randZFloat = randFloat(helicopter.randZMax) / 64.0f;
+
+                        calculate_helicopter_heading(&helicopter);
+                        
                         helicopter.accumulatedTime = 0.0f;
                     }
                     break;
+                case FLY_BACK:
+                    helicopter.rotation += helicopter.MAX_ROTATION;
+                    helicopter.offsetX += helicopter.randXFloat;
+                    helicopter.offsetZ += helicopter.randZFloat;
+
+
+                    if(glm::abs(helicopter.offsetX) <= 1 && glm::abs(helicopter.offsetZ) <= 1){
+                        helicopter.heliState = LANDING;
+                        helicopter.heading = 0;
+                    }
+                    break;
+                case LANDING:
+                    helicopter.offsetY -= helicopter.MAX_HEIGHT/(helicopter.LIFT_OFF_TIME*150.0f);
+                    helicopter.rotation += helicopter.MAX_ROTATION;
+
+                    if(helicopter.offsetY <= 0){
+                        helicopter.heliState = SPOOL_DOWN;
+                    }
+                    break;
+
+                case SPOOL_DOWN:
+                    x -= 3.0f/(helicopter.SPOOL_UP_TIME*50.0f);
+                    helicopter.rotation -= ((2.0f/(1.0f+glm::exp(-2.0f*x)))-1.0f)*helicopter.MAX_ROTATION;
+                    prevTime = crntTime;
+                    std::cout << "X: " << x << std::endl;
+                    if(x <= 0){
+                        helicopter.heliState = SHUT_DOWN;
+                        std::cout << "SHUT OFF!!" << std::endl;
+                    }
+                    break;
+
                 default:
                     break;
             }
 
             prevTime = crntTime;
+
+            if(glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS){
+                helicopter.heliState = FLY_BACK;
+                helicopter.randXFloat = -helicopter.offsetX / 500.0f;
+                helicopter.randZFloat = -helicopter.offsetZ / 500.0f;
+                calculate_helicopter_heading(&helicopter);
+            }
+
+            if(glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS){
+                helicopter.heliState = SPOOL_UP;
+            }
         }
 
         camera.Inputs(window);
         camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
+        glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        glm::vec3 lightPos = glm::vec3(armyHelicopterBody.centerX, armyHelicopterBody.centerY, armyHelicopterBody.centerZ);
+
+        baseSceneShader.Activate();
+        glUniform4f(glGetUniformLocation(baseSceneShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+        glUniform3f(glGetUniformLocation(baseSceneShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
         baseScene.Draw(baseSceneShader, camera, resVec);
         armyHelicopterBody.myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(helicopter.offsetX, -helicopter.offsetY, helicopter.offsetZ)) * glm::translate(glm::mat4(1.0f), glm::vec3(armyHelicopterRotor.centerX, armyHelicopterRotor.centerY, armyHelicopterRotor.centerZ)) * glm::rotate(glm::mat4(1.0f), helicopter.heading, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::translate(glm::mat4(1.0f), glm::vec3(-armyHelicopterRotor.centerX, -armyHelicopterRotor.centerY, -armyHelicopterRotor.centerZ));
         armyHelicopterBody.Draw(armyHelicopterBodyShader, camera, resVec);
-        armyHelicopterRotor.myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(helicopter.offsetX, -helicopter.offsetY, helicopter.offsetZ)) * glm::rotate(glm::mat4(1.0f), glm::radians(helicopter.rotation), glm::vec3(0.0f, 1.0f, 0.0f));
+        
+        armyHelicopterRotor.myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(helicopter.offsetX, -helicopter.offsetY, helicopter.offsetZ)) * glm::translate(glm::mat4(1.0f), glm::vec3(armyHelicopterRotor.centerX, armyHelicopterRotor.centerY, armyHelicopterRotor.centerZ)) * glm::rotate(glm::mat4(1.0f), glm::radians(helicopter.rotation), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::translate(glm::mat4(1.0f), glm::vec3(-armyHelicopterRotor.centerX, -armyHelicopterRotor.centerY, -armyHelicopterRotor.centerZ));
         armyHelicopterRotor.Draw(armyHelicopterRotorShader, camera, resVec);
 
         glfwSwapBuffers(window);
@@ -266,4 +337,20 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
     ma_data_source_read_pcm_frames(pDecoder, pOutput, frameCount, NULL);
 
     (void)pInput;
+}
+
+void calculate_helicopter_heading(struct helicopterObject* helicopter){
+    //Calculate the angle in the first quadrant and ensure the denominator is not 0
+    float theta = glm::atan(glm::abs((*helicopter).randXFloat/((*helicopter).randZFloat+1e-5)));
+
+    //Calculate the heading based on the trig quadrant rule.
+    if((*helicopter).randXFloat > 0 && (*helicopter).randZFloat > 0){
+        (*helicopter).heading = theta;
+    }else if((*helicopter).randXFloat < 0 && (*helicopter).randZFloat > 0){
+        (*helicopter).heading = glm::pi<float>() - theta;
+    }else if((*helicopter).randXFloat < 0 && (*helicopter).randZFloat < 0){
+        (*helicopter).heading = glm::pi<float>() + theta;
+    }else{
+        (*helicopter).heading = glm::two_pi<float>() - theta;
+    }
 }
