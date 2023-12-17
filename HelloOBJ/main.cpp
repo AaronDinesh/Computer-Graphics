@@ -52,6 +52,31 @@ struct helicopterObject{
 
 };
 
+enum zombieState{
+    START,
+    WALKING,
+    END
+};
+struct zombieGroup{
+    enum zombieState groupState = START;
+    static const int objectCount = 3;
+    Model* objects[objectCount];
+    Shader* objectShaders[objectCount];
+    float interpolationNum = 0.0f;
+    float randXFloat = 0.0f;
+    float randZFloat = 0.0f;
+    float offsetX = 0.0f;
+    float xLimMin = -11.0f;
+    float xLimMax = 83.0f;
+    float offsetZ = 0.0f;
+    float zLimMin = -4.0f;
+    float zLimMax = 2.8f;
+    float heading = 0.0f;
+    float accumulatedTime = 0.0f;
+};
+
+
+
 GLFWwindow* glINIT(int WIDTH, int HEIGHT);
 void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 void calculate_helicopter_heading(struct helicopterObject* helicopter);
@@ -108,12 +133,15 @@ int main(){
     GLFWwindow* window = glINIT(WIDTH, HEIGHT);
     glm::vec2 resVec = glm::vec2(WIDTH, HEIGHT);
 
-    //Shader* zombieShader[5];
+    struct zombieGroup zombieGroup1;
     
     Shader baseSceneShader("Shaders/default.vert","Shaders/default.frag");
     Shader armyHelicopterBodyShader("Shaders/armyHelicopterBody.vert","Shaders/armyHelicopterBody.frag");
     Shader armyHelicopterRotorShader("Shaders/armyHelicopterRotor.vert","Shaders/armyHelicopterRotor.frag");
-    Shader zombieShader("Shaders/zombie.vert", "Shaders/zombie.frag");
+    Shader zombie1Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
+    Shader zombie2Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
+    Shader zombie3Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
+
 
 
     glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -133,10 +161,21 @@ int main(){
     glUniform4f(glGetUniformLocation(armyHelicopterRotorShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
     glUniform3f(glGetUniformLocation(armyHelicopterRotorShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
-    zombieShader.Activate();
-    glUniform4f(glGetUniformLocation(zombieShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-    glUniform3f(glGetUniformLocation(zombieShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+    zombie1Shader.Activate();
+    glUniform4f(glGetUniformLocation(zombie1Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(zombie1Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
+    zombie2Shader.Activate();
+    glUniform4f(glGetUniformLocation(zombie2Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(zombie2Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
+    zombie3Shader.Activate();
+    glUniform4f(glGetUniformLocation(zombie3Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(zombie3Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
+    zombieGroup1.objectShaders[0] = &zombie1Shader;
+    zombieGroup1.objectShaders[1] = &zombie2Shader;
+    zombieGroup1.objectShaders[2] = &zombie3Shader;
 
 
     glEnable(GL_DEPTH_TEST);
@@ -157,9 +196,19 @@ int main(){
     initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(-0.1f, 7.5f, 0.5f)) * initTransform;
     Model armyHelicopterRotor("Objects/ArmyHelicopterRotor/scene.gltf", scale, initTransform);
     
-    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(-10.0f, -25.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    scale = glm::vec3(0.5f, 0.5f, 0.5f);
-    Model zombie("Objects/zombie/scene.gltf", scale, initTransform);
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(-21.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    scale = glm::vec3(0.25f, 0.25f, 0.25f);
+    Model zombie1("Objects/zombie/scene.gltf", scale, initTransform);
+    
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(-22.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    Model zombie2("Objects/zombie/scene.gltf", scale, initTransform);
+    
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(-20.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    Model zombie3("Objects/zombie/scene.gltf", scale, initTransform);
+    
+    zombieGroup1.objects[0] = &zombie1;
+    zombieGroup1.objects[1] = &zombie2;
+    zombieGroup1.objects[2] = &zombie3; 
 
 
     glm::vec3 fogColor = glm::vec3(0.07f, 0.13f, 0.17f);
@@ -186,9 +235,10 @@ int main(){
         armyHelicopterRotorShader.Activate();
         glUniform3f(glGetUniformLocation(armyHelicopterRotorShader.ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
 
-        zombieShader.Activate();
-        glUniform3f(glGetUniformLocation(zombieShader.ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
-
+        for(int i = 0; i < zombieGroup1.objectCount; i++){
+            zombieGroup1.objectShaders[i]->Activate();
+            glUniform3f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
+        }
 
         double crntTime = glfwGetTime();
 
@@ -274,28 +324,37 @@ int main(){
                     }
                     break;
                 case TESTING:
-                    if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-                        helicopter.randZFloat += 1.0f;
-                    }
-
-                    if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-                        helicopter.randZFloat -= 1.0f;
-                    }
-
-                    if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
-                        helicopter.randXFloat += 1.0f;
-                    }
-
-                    if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
-                        helicopter.randXFloat -= 1.0f;
-                    }
-
                     calculate_helicopter_heading(&helicopter);
                     std::cout << "Angle: " << glm::degrees(helicopter.heading) << " Offset XZ: " << helicopter.randXFloat << ":" << helicopter.randZFloat <<std::endl;
-                    // helicopter.offsetX += helicopter.randXFloat;
-                    // helicopter.offsetZ += helicopter.randZFloat;
-
                     break;
+                default:
+                    break;
+            }
+
+            switch(zombieGroup1.groupState){
+                case START:
+                    zombieGroup1.randXFloat = randFloat(5)/64.0f;
+                    zombieGroup1.randZFloat = randFloat(0.1)/64.0f;
+                    zombieGroup1.groupState = WALKING;
+                    break;
+                case WALKING:
+                    if(zombieGroup1.offsetX < zombieGroup1.xLimMin ||  zombieGroup1.offsetX > zombieGroup1.xLimMax){
+                        zombieGroup1.randXFloat = -zombieGroup1.randXFloat;
+                    }
+                    
+                    if(zombieGroup1.offsetZ < zombieGroup1.zLimMin ||  zombieGroup1.offsetZ > zombieGroup1.zLimMax){
+                        zombieGroup1.randZFloat = -zombieGroup1.randZFloat;
+                    }
+
+                    zombieGroup1.offsetX += zombieGroup1.randXFloat;
+                    zombieGroup1.offsetZ += zombieGroup1.randZFloat;
+                    
+                    zombieGroup1.accumulatedTime += crntTime - prevTime;
+                    if(zombieGroup1.accumulatedTime >= 10.0f){
+                        zombieGroup1.randXFloat = randFloat(5)/64.0f;
+                        zombieGroup1.randZFloat = randFloat(5)/64.0f;
+                        zombieGroup1.accumulatedTime = 0.0f;
+                    }
                 default:
                     break;
             }
@@ -331,7 +390,13 @@ int main(){
         armyHelicopterRotor.myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(helicopter.offsetX, -helicopter.offsetY, helicopter.offsetZ)) * glm::translate(glm::mat4(1.0f), glm::vec3(armyHelicopterRotor.centerX, armyHelicopterRotor.centerY, armyHelicopterRotor.centerZ)) * glm::rotate(glm::mat4(1.0f), glm::radians(helicopter.rotation), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::translate(glm::mat4(1.0f), glm::vec3(-armyHelicopterRotor.centerX, -armyHelicopterRotor.centerY, -armyHelicopterRotor.centerZ));
         armyHelicopterRotor.Draw(armyHelicopterRotorShader, camera, resVec);
 
-        zombie.Draw(zombieShader, camera, resVec);
+        for(int i = 0; i < zombieGroup1.objectCount; i++){
+            zombieGroup1.objectShaders[i]->Activate();
+            zombieGroup1.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup1.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup1.offsetZ+(randFloat(5)/128.0f)));
+            glUniform4f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+            glUniform3f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+            zombieGroup1.objects[i]->Draw((*zombieGroup1.objectShaders[i]), camera, resVec);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -343,7 +408,13 @@ int main(){
     baseSceneShader.Delete();
     armyHelicopterBodyShader.Delete();
     armyHelicopterRotorShader.Delete();
-    zombieShader.Delete();
+
+    for(int i = 0; i < zombieGroup1.objectCount; i++){
+        zombieGroup1.objectShaders[i]->Delete();
+    }
+
+
+
     glfwTerminate();
     return 0;
 }

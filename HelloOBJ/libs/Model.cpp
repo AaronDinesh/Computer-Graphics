@@ -438,7 +438,7 @@ void Model::findBindingBox(){
 
 			if(meshes[i].vertices[j].position.x > maxX) maxX = meshes[i].vertices[j].position.x;
 			if(meshes[i].vertices[j].position.y > maxY) maxY = meshes[i].vertices[j].position.y;
-			if(meshes[i].vertices[j].position.z > minZ) maxZ = meshes[i].vertices[j].position.z;
+			if(meshes[i].vertices[j].position.z > maxZ) maxZ = meshes[i].vertices[j].position.z;
 		}
 	}
 }
