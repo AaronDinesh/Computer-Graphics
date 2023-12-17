@@ -24,7 +24,8 @@ enum helicopterState{
     FLY_BACK,
     LANDING,
     SPOOL_DOWN,
-    SHUT_DOWN
+    SHUT_DOWN,
+    TESTING
 };
 
 struct helicopterObject{
@@ -168,6 +169,9 @@ int main(){
     double prevTime = glfwGetTime();
     double x = 0.0f;
 
+    float test_angle_rm_later = 0.0f;
+
+
     while(!glfwWindowShouldClose(window)){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
@@ -269,7 +273,29 @@ int main(){
                         std::cout << "SHUT OFF!!" << std::endl;
                     }
                     break;
+                case TESTING:
+                    if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+                        helicopter.randZFloat += 1.0f;
+                    }
 
+                    if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+                        helicopter.randZFloat -= 1.0f;
+                    }
+
+                    if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+                        helicopter.randXFloat += 1.0f;
+                    }
+
+                    if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+                        helicopter.randXFloat -= 1.0f;
+                    }
+
+                    calculate_helicopter_heading(&helicopter);
+                    std::cout << "Angle: " << glm::degrees(helicopter.heading) << " Offset XZ: " << helicopter.randXFloat << ":" << helicopter.randZFloat <<std::endl;
+                    // helicopter.offsetX += helicopter.randXFloat;
+                    // helicopter.offsetZ += helicopter.randZFloat;
+
+                    break;
                 default:
                     break;
             }
@@ -362,16 +388,18 @@ void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uin
 
 void calculate_helicopter_heading(struct helicopterObject* helicopter){
     //Calculate the angle in the first quadrant and ensure the denominator is not 0
-    float theta = glm::atan(glm::abs((*helicopter).randXFloat/((*helicopter).randZFloat+1e-5)));
+    float theta = glm::atan(glm::abs((*helicopter).randZFloat/((*helicopter).randXFloat+1e-8)));
 
     //Calculate the heading based on the trig quadrant rule.
     if((*helicopter).randXFloat > 0 && (*helicopter).randZFloat > 0){
-        (*helicopter).heading = theta;
+        (*helicopter).heading = glm::three_over_two_pi<float>() - theta;
+    }else if((*helicopter).randXFloat > 0 && (*helicopter).randZFloat < 0){
+        (*helicopter).heading = glm::three_over_two_pi<float>() + theta;
     }else if((*helicopter).randXFloat < 0 && (*helicopter).randZFloat > 0){
-        (*helicopter).heading = glm::pi<float>() - theta;
+        (*helicopter).heading = glm::half_pi<float>() + theta;
     }else if((*helicopter).randXFloat < 0 && (*helicopter).randZFloat < 0){
-        (*helicopter).heading = glm::pi<float>() + theta;
+        (*helicopter).heading = glm::half_pi<float>() - theta;
     }else{
-        (*helicopter).heading = glm::two_pi<float>() - theta;
+        (*helicopter).heading = 0;
     }
 }
