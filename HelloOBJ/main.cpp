@@ -55,6 +55,8 @@ struct helicopterObject{
 enum zombieState{
     START,
     WALKING,
+    TRACKING,
+    GO_TO_ORIGINAL_PLACES,
     END
 };
 struct zombieGroup{
@@ -66,13 +68,14 @@ struct zombieGroup{
     float randXFloat = 0.0f;
     float randZFloat = 0.0f;
     float offsetX = 0.0f;
-    float xLimMin = -11.0f;
-    float xLimMax = 83.0f;
+    float xLimMin = 0.0f;
+    float xLimMax = 0.0f;
     float offsetZ = 0.0f;
-    float zLimMin = -4.0f;
-    float zLimMax = 2.8f;
+    float zLimMin = 0.0f;
+    float zLimMax = 0.0f;
     float heading = 0.0f;
     float accumulatedTime = 0.0f;
+    glm::vec2 toCamera = glm::vec2(1.0f);
 };
 
 
@@ -133,7 +136,17 @@ int main(){
     GLFWwindow* window = glINIT(WIDTH, HEIGHT);
     glm::vec2 resVec = glm::vec2(WIDTH, HEIGHT);
 
+
     struct zombieGroup zombieGroup1;
+    zombieGroup1.xLimMin = -11.0f;
+    zombieGroup1.xLimMax = 83.0f;
+    zombieGroup1.zLimMin = -4.0f;
+    zombieGroup1.zLimMax = 2.8f;
+    struct zombieGroup zombieGroup2;
+    zombieGroup2.xLimMin = -72.0f;
+    zombieGroup2.xLimMax = 84.0f;
+    zombieGroup2.zLimMin = -2.5f;
+    zombieGroup2.zLimMax = 4.0f;
     
     Shader baseSceneShader("Shaders/default.vert","Shaders/default.frag");
     Shader armyHelicopterBodyShader("Shaders/armyHelicopterBody.vert","Shaders/armyHelicopterBody.frag");
@@ -141,6 +154,10 @@ int main(){
     Shader zombie1Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
     Shader zombie2Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
     Shader zombie3Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
+    
+    Shader zombie4Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
+    Shader zombie5Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
+    Shader zombie6Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
 
 
 
@@ -173,9 +190,29 @@ int main(){
     glUniform4f(glGetUniformLocation(zombie3Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
     glUniform3f(glGetUniformLocation(zombie3Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
+    zombie4Shader.Activate();
+    glUniform4f(glGetUniformLocation(zombie4Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(zombie4Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+    
+    zombie5Shader.Activate();
+    glUniform4f(glGetUniformLocation(zombie5Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(zombie5Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+    
+    zombie6Shader.Activate();
+    glUniform4f(glGetUniformLocation(zombie6Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(zombie6Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+
+
+
+
     zombieGroup1.objectShaders[0] = &zombie1Shader;
     zombieGroup1.objectShaders[1] = &zombie2Shader;
     zombieGroup1.objectShaders[2] = &zombie3Shader;
+
+
+    zombieGroup2.objectShaders[0] = &zombie4Shader;
+    zombieGroup2.objectShaders[1] = &zombie5Shader;
+    zombieGroup2.objectShaders[2] = &zombie6Shader;
 
 
     glEnable(GL_DEPTH_TEST);
@@ -206,9 +243,25 @@ int main(){
     initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(-20.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     Model zombie3("Objects/zombie/scene.gltf", scale, initTransform);
     
+    //Second Group of Zombies
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(29.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    Model zombie4("Objects/zombie/scene.gltf", scale, initTransform);
+    
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(31.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    Model zombie5("Objects/zombie/scene.gltf", scale, initTransform);
+    
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(30.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    Model zombie6("Objects/zombie/scene.gltf", scale, initTransform);    
+    
+    
+    
     zombieGroup1.objects[0] = &zombie1;
     zombieGroup1.objects[1] = &zombie2;
-    zombieGroup1.objects[2] = &zombie3; 
+    zombieGroup1.objects[2] = &zombie3;
+
+    zombieGroup2.objects[0] = &zombie4;
+    zombieGroup2.objects[1] = &zombie5;
+    zombieGroup2.objects[2] = &zombie6;
 
 
     glm::vec3 fogColor = glm::vec3(0.07f, 0.13f, 0.17f);
@@ -238,6 +291,11 @@ int main(){
         for(int i = 0; i < zombieGroup1.objectCount; i++){
             zombieGroup1.objectShaders[i]->Activate();
             glUniform3f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
+        }
+
+        for(int i = 0; i < zombieGroup2.objectCount; i++){
+            zombieGroup2.objectShaders[i]->Activate();
+            glUniform3f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
         }
 
         double crntTime = glfwGetTime();
@@ -333,8 +391,8 @@ int main(){
 
             switch(zombieGroup1.groupState){
                 case START:
-                    zombieGroup1.randXFloat = randFloat(5)/64.0f;
-                    zombieGroup1.randZFloat = randFloat(0.1)/64.0f;
+                    zombieGroup1.randXFloat = randFloat(5)/20.0f;
+                    zombieGroup1.randZFloat = randFloat(5)/50.0f;
                     zombieGroup1.groupState = WALKING;
                     break;
                 case WALKING:
@@ -351,10 +409,98 @@ int main(){
                     
                     zombieGroup1.accumulatedTime += crntTime - prevTime;
                     if(zombieGroup1.accumulatedTime >= 10.0f){
-                        zombieGroup1.randXFloat = randFloat(5)/64.0f;
-                        zombieGroup1.randZFloat = randFloat(5)/64.0f;
+                        zombieGroup1.randXFloat = randFloat(5)/20.0f;
+                        zombieGroup1.randZFloat = randFloat(5)/50.0f;
                         zombieGroup1.accumulatedTime = 0.0f;
                     }
+                    break;
+                case TRACKING:
+                    zombieGroup1.toCamera = glm::normalize(glm::vec2(camera.Position.x, camera.Position.z) - glm::vec2(zombieGroup1.offsetX, zombieGroup1.offsetZ));
+                    zombieGroup1.randXFloat = zombieGroup1.toCamera.x/8.0f;
+                    zombieGroup1.randZFloat = zombieGroup1.toCamera.y/8.0f;
+                    zombieGroup1.offsetX += zombieGroup1.randXFloat;
+                    zombieGroup1.offsetZ += zombieGroup1.randZFloat;
+
+                    if(zombieGroup1.toCamera.length() < 0.01f){
+                        zombieGroup1.randXFloat = 0.0f;
+                        zombieGroup1.randZFloat = 0.0f;    
+                    }
+                    break;
+                case GO_TO_ORIGINAL_PLACES:
+                    zombieGroup1.offsetX += zombieGroup1.randXFloat;
+                    zombieGroup1.offsetZ += zombieGroup1.randZFloat;
+
+                    if(zombieGroup1.offsetX*zombieGroup1.offsetX + zombieGroup1.offsetZ*zombieGroup1.offsetZ < 0.5f*0.5f){
+                        zombieGroup1.groupState = WALKING;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            switch(zombieGroup2.groupState){
+                case START:
+                    zombieGroup2.randXFloat = randFloat(5)/20.0f;
+                    zombieGroup2.randZFloat = randFloat(5)/50.0f;
+                    zombieGroup2.groupState = WALKING;
+                    
+                    // if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+                    //     zombieGroup2.offsetX += 1;
+                    // }
+
+                    // if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+                    //     zombieGroup2.offsetX -= 1;
+                    // }
+
+                    // if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+                    //     zombieGroup2.offsetZ += 1;
+                    // }
+
+                    // if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+                    //     zombieGroup2.offsetZ -= 1;
+                    // }
+
+                    // std::cout << "Offset XZ: " << zombieGroup2.offsetX << "," << zombieGroup2.offsetZ << std::endl;
+                    break;
+                case WALKING:
+                    if(zombieGroup2.offsetX < zombieGroup2.xLimMin ||  zombieGroup2.offsetX > zombieGroup2.xLimMax){
+                        zombieGroup2.randXFloat = -zombieGroup2.randXFloat;
+                    }
+                    
+                    if(zombieGroup2.offsetZ < zombieGroup2.zLimMin ||  zombieGroup2.offsetZ > zombieGroup2.zLimMax){
+                        zombieGroup2.randZFloat = -zombieGroup2.randZFloat;
+                    }
+
+                    zombieGroup2.offsetX += zombieGroup2.randXFloat;
+                    zombieGroup2.offsetZ += zombieGroup2.randZFloat;
+                    
+                    zombieGroup2.accumulatedTime += crntTime - prevTime;
+                    if(zombieGroup2.accumulatedTime >= 10.0f){
+                        zombieGroup2.randXFloat = randFloat(5)/20.0f;
+                        zombieGroup2.randZFloat = randFloat(5)/50.0f;
+                        zombieGroup2.accumulatedTime = 0.0f;
+                    }
+                    break;
+                case TRACKING:
+                    zombieGroup2.toCamera = glm::normalize(glm::vec2(camera.Position.x, camera.Position.z) - glm::vec2(zombieGroup2.offsetX, zombieGroup2.offsetZ));
+                    zombieGroup2.randXFloat = zombieGroup2.toCamera.x/8.0f;
+                    zombieGroup2.randZFloat = zombieGroup2.toCamera.y/8.0f;
+                    zombieGroup2.offsetX += zombieGroup2.randXFloat;
+                    zombieGroup2.offsetZ += zombieGroup2.randZFloat;
+
+                    if(zombieGroup2.toCamera.length() < 0.01f){
+                        zombieGroup2.randXFloat = 0.0f;
+                        zombieGroup2.randZFloat = 0.0f;    
+                    }
+                    break;
+                case GO_TO_ORIGINAL_PLACES:
+                    zombieGroup2.offsetX += zombieGroup2.randXFloat;
+                    zombieGroup2.offsetZ += zombieGroup2.randZFloat;
+
+                    if(zombieGroup2.offsetX*zombieGroup2.offsetX + zombieGroup2.offsetZ*zombieGroup2.offsetZ < 0.5f*0.5f){
+                        zombieGroup2.groupState = WALKING;
+                    }
+                    break;
                 default:
                     break;
             }
@@ -371,6 +517,16 @@ int main(){
             if(glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS){
                 helicopter.heliState = SPOOL_UP;
             }
+
+            // if(glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS){
+            //     zombieGroup1.groupState = TRACKING;
+            // }
+            
+            // if(glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+            //     zombieGroup1.groupState = GO_TO_ORIGINAL_PLACES;
+            //     zombieGroup1.randXFloat = -zombieGroup1.offsetX / 500.0f;
+            //     zombieGroup1.randZFloat = -zombieGroup1.offsetZ / 500.0f;
+            // }
         }
 
         camera.Inputs(window);
@@ -398,6 +554,14 @@ int main(){
             zombieGroup1.objects[i]->Draw((*zombieGroup1.objectShaders[i]), camera, resVec);
         }
 
+        for(int i = 0; i < zombieGroup2.objectCount; i++){
+            zombieGroup2.objectShaders[i]->Activate();
+            zombieGroup2.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup2.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup2.offsetZ+(randFloat(5)/128.0f)));
+            glUniform4f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+            glUniform3f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+            zombieGroup2.objects[i]->Draw((*zombieGroup2.objectShaders[i]), camera, resVec);
+        }
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -413,7 +577,9 @@ int main(){
         zombieGroup1.objectShaders[i]->Delete();
     }
 
-
+    for(int i = 0; i < zombieGroup2.objectCount; i++){
+        zombieGroup2.objectShaders[i]->Delete();
+    }
 
     glfwTerminate();
     return 0;

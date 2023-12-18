@@ -23,8 +23,8 @@ uniform vec2 iResolution;
 uniform float iTime;
 uniform vec3 skyColor;
 
-const float density = 0.07;
-const float gradient = 1.5;
+const float density = 0.05;
+const float gradient = 0.8;
 
 float fog(){
     float distance = distance(vertloc.xyz, camPos.xyz);
@@ -121,7 +121,7 @@ vec4 returnSpecularTexture(){
 
 void main(){
     vec4 lighting = directionalLight();
-    //float visibility = fog();
-    float visibility = 1.0;
+    float visibility = fog();
+    //float visibility = 1.0;
     FragColor = mix(vec4(skyColor, 1.0f), lighting, visibility);
 };
