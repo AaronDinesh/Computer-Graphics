@@ -58,7 +58,7 @@ vec4 pointLight(){
 
 
 vec4 directionalLight(){
-    float ambient = 0.20f;
+    float ambient = 0.1f;
     vec3 normal = normalize(Normal);
 
     //Specify the direction in the opposite direction you want the light to affect.
@@ -89,7 +89,7 @@ vec4 spotLight(){
     float innerCone = 0.95f;
 
 
-    float ambient = 0.20f;
+    float ambient = 0.10f;
     vec3 normal = normalize(Normal);
 
     vec3 lightDirection = normalize(lightPosition - crntPosition);

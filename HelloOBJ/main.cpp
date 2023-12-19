@@ -404,6 +404,9 @@ int main(){
                         zombieGroup1.randZFloat = -zombieGroup1.randZFloat;
                     }
 
+                    //Set the heading to be 0 normally except when the zombies are moving backwards
+                    //then set the heading to 180
+                    zombieGroup1.heading = 0 + (float) 180*(zombieGroup1.randXFloat < 0);
                     zombieGroup1.offsetX += zombieGroup1.randXFloat;
                     zombieGroup1.offsetZ += zombieGroup1.randZFloat;
                     
@@ -460,7 +463,8 @@ int main(){
                     //     zombieGroup2.offsetZ -= 1;
                     // }
 
-                    // std::cout << "Offset XZ: " << zombieGroup2.offsetX << "," << zombieGroup2.offsetZ << std::endl;
+                    // zombieGroup2.heading = 0 + (float) 180*(zombieGroup2.offsetX < 0);
+                    // std::cout << "Offset XZ: " << zombieGroup2.offsetX << "," << zombieGroup2.offsetZ <<std::endl;
                     break;
                 case WALKING:
                     if(zombieGroup2.offsetX < zombieGroup2.xLimMin ||  zombieGroup2.offsetX > zombieGroup2.xLimMax){
@@ -470,7 +474,11 @@ int main(){
                     if(zombieGroup2.offsetZ < zombieGroup2.zLimMin ||  zombieGroup2.offsetZ > zombieGroup2.zLimMax){
                         zombieGroup2.randZFloat = -zombieGroup2.randZFloat;
                     }
-
+                    
+                    
+                    //Set the heading to be 0 normally except when the zombies are moving backwards
+                    //then set the heading to 180
+                    zombieGroup2.heading = 0 + (float) 180*(zombieGroup2.randXFloat < 0);
                     zombieGroup2.offsetX += zombieGroup2.randXFloat;
                     zombieGroup2.offsetZ += zombieGroup2.randZFloat;
                     
@@ -548,7 +556,7 @@ int main(){
 
         for(int i = 0; i < zombieGroup1.objectCount; i++){
             zombieGroup1.objectShaders[i]->Activate();
-            zombieGroup1.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup1.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup1.offsetZ+(randFloat(5)/128.0f)));
+            zombieGroup1.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup1.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup1.offsetZ+(randFloat(5)/128.0f))) * glm::rotate(glm::mat4(1.0f), glm::radians(zombieGroup1.heading), glm::vec3(0.0f, 1.0f, 0.0f));
             glUniform4f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
             glUniform3f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
             zombieGroup1.objects[i]->Draw((*zombieGroup1.objectShaders[i]), camera, resVec);
@@ -556,7 +564,7 @@ int main(){
 
         for(int i = 0; i < zombieGroup2.objectCount; i++){
             zombieGroup2.objectShaders[i]->Activate();
-            zombieGroup2.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup2.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup2.offsetZ+(randFloat(5)/128.0f)));
+            zombieGroup2.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup2.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup2.offsetZ+(randFloat(5)/128.0f))) * glm::rotate(glm::mat4(1.0f), glm::radians(zombieGroup2.heading), glm::vec3(0.0f, 1.0f, 0.0f));
             glUniform4f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
             glUniform3f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
             zombieGroup2.objects[i]->Draw((*zombieGroup2.objectShaders[i]), camera, resVec);
