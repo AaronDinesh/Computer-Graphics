@@ -24,15 +24,19 @@ vec4 pointLight(){
     vec3 lightDirection = normalize(lightVec);
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
+    float specular = 0.0f;
 
-    float specularLight = 0.5f;
-    vec3 viewDirection = normalize(camPos - crntPosition);
-    vec3 reflectDirection = reflect(-lightDirection, normal);
+    if(diffuse != 0.0f){
+        float specularLight = 0.5f;
+        vec3 viewDirection = normalize(camPos - crntPosition);
+        vec3 reflectDirection = reflect(-lightDirection, normal);
 
-    //Increasing the power has the effect of making the specular light more point like
-    float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
-    float specular = specAmount * specularLight;
+        vec3 halfVec = normalize(viewDirection+lightDirection);
 
+        //Increasing the power has the effect of making the specular light more point like
+        float specAmount = pow(max(dot(normal, halfVec), 0.0f), 50);
+        float specular = specAmount * specularLight;
+    }
     return texture(tex0, texCoords) * lightColor * (diffuse * intensity + ambient) + texture(tex1, texCoords).r * specular;
 }
 
@@ -90,13 +94,6 @@ vec4 spotLight(){
     return texture(tex0, texCoords) * lightColor * (diffuse*intensity + ambient) + texture(tex1, texCoords).r * specular*intensity;
 }
 
-
-
-
-
-
 void main(){
-
-
     FragColor = pointLight();
 };

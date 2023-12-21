@@ -44,14 +44,19 @@ vec4 pointLight(){
     vec3 lightDirection = normalize(lightVec);
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
+    float specular = 0.0f;
 
-    float specularLight = 0.5f;
-    vec3 viewDirection = normalize(camPos - crntPosition);
-    vec3 reflectDirection = reflect(-lightDirection, normal);
+    if(diffuse != 0.0f){
+        float specularLight = 0.5f;
+        vec3 viewDirection = normalize(camPos - crntPosition);
+        vec3 reflectDirection = reflect(-lightDirection, normal);
 
-    //Increasing the power has the effect of making the specular light more point like
-    float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
-    float specular = specAmount * specularLight;
+        vec3 halfVec = normalize(viewDirection+lightDirection);
+
+        //Increasing the power has the effect of making the specular light more point like
+        float specAmount = pow(max(dot(normal, halfVec), 0.0f), 50);
+        float specular = specAmount * specularLight;
+    }
 
     return texture(diffuse0, texCoords) * lightColor * (diffuse * intensity + ambient) + texture(specular0, texCoords).r * specular;
 }
@@ -67,7 +72,7 @@ vec4 directionalLight(){
     vec3 lightDirection = normalize(vec3(1.0f, 1.0f, 0.0f));
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
-
+    
     float specularLight = 0.5f;
     vec3 viewDirection = normalize(camPos - crntPosition);
     vec3 reflectDirection = reflect(-lightDirection, normal);
@@ -95,14 +100,19 @@ vec4 spotLight(){
     vec3 lightDirection = normalize(lightPosition - crntPosition);
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
+    float specular = 0.0f;
 
-    float specularLight = 0.5f;
-    vec3 viewDirection = normalize(camPos - crntPosition);
-    vec3 reflectDirection = reflect(-lightDirection, normal);
+    if(diffuse != 0.0f){
+        float specularLight = 0.5f;
+        vec3 viewDirection = normalize(camPos - crntPosition);
+        vec3 reflectDirection = reflect(-lightDirection, normal);
 
-    //Increasing the power has the effect of making the specular light more point like
-    float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
-    float specular = specAmount * specularLight;
+        vec3 halfVec = normalize(viewDirection+lightDirection);
+
+        //Increasing the power has the effect of making the specular light more point like
+        float specAmount = pow(max(dot(normal, halfVec), 0.0f), 50);
+        float specular = specAmount * specularLight;
+    }
 
     float angle = dot(vec3(0.0f, -1.0f, 0.0f), -lightDirection);
     float intensity = clamp((angle - outerCone)/(innerCone - outerCone), 0.0f, 1.0f);
@@ -123,7 +133,7 @@ void main(){
     vec4 lightingDirectional = directionalLight();
     vec4 lightingSpot = spotLight();
     vec4 lighting = lightingDirectional + lightingSpot;
-    float visibility = fog();
-    //float visibility = 1.0;
+    //float visibility = fog();
+    float visibility = 1.0;
     FragColor = mix(vec4(skyColor, 1.0f), lighting, visibility);
 };

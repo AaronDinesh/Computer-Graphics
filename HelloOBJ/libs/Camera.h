@@ -15,6 +15,13 @@
 
 class Camera{
     public:
+        enum CameraState{
+            HELICOPTER,
+            FREE,
+            HUMAN
+        };
+
+        enum CameraState cameraState = FREE;
         glm::vec3 Position;
         glm::vec3 Orientation = glm::vec3(0.0f, 0.0f, -1.0f);
         glm::vec3 Up = glm::vec3(0.0f, 1.0f, 0.0f);

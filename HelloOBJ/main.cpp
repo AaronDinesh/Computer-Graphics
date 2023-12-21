@@ -49,7 +49,6 @@ struct helicopterObject{
     float sceneCenterX = 0.0f;
     float sceneCenterY = 0.0f;
     float sceneCenterZ = 0.0f;
-
 };
 
 enum zombieState{
@@ -159,6 +158,8 @@ int main(){
     Shader zombie5Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
     Shader zombie6Shader("Shaders/zombie.vert", "Shaders/zombie.frag");
 
+    Shader humanShader("Shaders/Human.vert", "Shaders/Human.frag");
+
 
 
     glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -202,6 +203,9 @@ int main(){
     glUniform4f(glGetUniformLocation(zombie6Shader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
     glUniform3f(glGetUniformLocation(zombie6Shader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
+    humanShader.Activate();
+    glUniform4f(glGetUniformLocation(humanShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+    glUniform3f(glGetUniformLocation(humanShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
 
 
@@ -253,7 +257,10 @@ int main(){
     initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(30.5f, -21.5f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     Model zombie6("Objects/zombie/scene.gltf", scale, initTransform);    
     
-    
+    initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -19.3f, 2.5f)) * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    scale = glm::vec3(2.0f, 2.5f, 2.0f);
+    Model human("Objects/HumanBlender/scene.gltf", scale, initTransform, true);
+    std::cout << "Center XYZ " << human.centerX << " " << human.centerY << " " << human.centerZ << std::endl;
     
     zombieGroup1.objects[0] = &zombie1;
     zombieGroup1.objects[1] = &zombie2;
@@ -297,6 +304,11 @@ int main(){
             zombieGroup2.objectShaders[i]->Activate();
             glUniform3f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
         }
+        
+        humanShader.Activate();
+        glUniform3f(glGetUniformLocation(humanShader.ID, "skyColor"), fogColor.x, fogColor.y, fogColor.z);
+
+
 
         double crntTime = glfwGetTime();
 
@@ -526,6 +538,19 @@ int main(){
                 helicopter.heliState = SPOOL_UP;
             }
 
+            if(glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS){
+                camera.cameraState = Camera::HELICOPTER;
+            }
+
+            if(glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+                camera.cameraState = Camera::FREE;
+            }
+
+            if(glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS){
+                camera.cameraState = Camera::HUMAN;
+            }
+
+
             // if(glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS){
             //     zombieGroup1.groupState = TRACKING;
             // }
@@ -538,6 +563,24 @@ int main(){
         }
 
         camera.Inputs(window);
+        glm::vec4 homoCenter = glm::vec4(1.0f);
+        switch(camera.cameraState){
+            case Camera::HELICOPTER:
+                homoCenter = glm::translate(glm::mat4(1.0f),glm::vec3(0.0f, 0.0f, -7.0f)) * glm::vec4(armyHelicopterBody.centerX, armyHelicopterBody.centerY, armyHelicopterBody.centerZ, 1.0f);
+                camera.Position = glm::vec3(homoCenter.x, homoCenter.y, homoCenter.z);
+                break;
+            case Camera::HUMAN:
+                homoCenter = glm::translate(glm::mat4(1.0f),glm::vec3(0.0f, 0.0f, 0.0f)) * glm::vec4(human.centerX, human.centerY, human.centerZ, 1.0f);
+                camera.Position = glm::vec3(homoCenter.x, homoCenter.y, homoCenter.z);
+                break;
+            default:
+                break;
+        }
+        if(camera.cameraState == Camera::HELICOPTER){
+            glm::vec4 homoCenter = glm::translate(glm::mat4(1.0f),glm::vec3(0.0f, 0.0f, -7.0f)) * glm::vec4(armyHelicopterBody.centerX, armyHelicopterBody.centerY, armyHelicopterBody.centerZ, 1.0f);
+            camera.Position = glm::vec3(homoCenter.x, homoCenter.y, homoCenter.z);
+        }
+
         camera.updateMatrix(45.0f, 0.1f, 100.0f);
 
         glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -570,6 +613,11 @@ int main(){
             zombieGroup2.objects[i]->Draw((*zombieGroup2.objectShaders[i]), camera, resVec);
         }
 
+        humanShader.Activate();
+        glUniform4f(glGetUniformLocation(humanShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+        glUniform3f(glGetUniformLocation(humanShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
+        human.Draw(humanShader, camera, resVec);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -589,6 +637,8 @@ int main(){
         zombieGroup2.objectShaders[i]->Delete();
     }
 
+    humanShader.Delete();
+
     glfwTerminate();
     return 0;
 }
@@ -600,7 +650,7 @@ GLFWwindow* glINIT(int WIDTH, int HEIGHT){
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "HelloTriangle", NULL, NULL);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Final Scene", NULL, NULL);
 
     if(!window){
         std::cout << "ERROR::WINDOW::CREATION::Failed to create window"<< std::endl;
