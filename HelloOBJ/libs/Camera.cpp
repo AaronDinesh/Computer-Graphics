@@ -104,7 +104,6 @@ void Camera::Inputs(GLFWwindow* window){
 		firstClick = true;
 	}
 
-
 	// if((int) glfwGetTime() % 3 == 0){
 	// 	//Print out CamPos
 	// 	std::cout << "Camera Position: " << glm::to_string(Position) << std::endl; 

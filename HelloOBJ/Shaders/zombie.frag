@@ -22,6 +22,7 @@ uniform vec3 camPos;
 uniform vec2 iResolution;
 uniform float iTime;
 uniform vec3 skyColor;
+uniform bool blinn;
 
 const float density = 0.05;
 const float gradient = 0.8;
@@ -72,7 +73,7 @@ vec4 directionalLight(){
     vec3 lightDirection = normalize(vec3(1.0f, 1.0f, 0.0f));
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
-
+    
     float specularLight = 0.5f;
     vec3 viewDirection = normalize(camPos - crntPosition);
     vec3 reflectDirection = reflect(-lightDirection, normal);
@@ -101,13 +102,28 @@ vec4 spotLight(){
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
 
-    float specularLight = 0.5f;
-    vec3 viewDirection = normalize(camPos - crntPosition);
-    vec3 reflectDirection = reflect(-lightDirection, normal);
+    float specular = 0.0f;
+    if(blinn){
+        if(diffuse != 0.0f){
+            float specularLight = 0.5f;
+            vec3 viewDirection = normalize(camPos - crntPosition);
+            vec3 reflectDirection = reflect(-lightDirection, normal);
 
-    //Increasing the power has the effect of making the specular light more point like
-    float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
-    float specular = specAmount * specularLight;
+            vec3 halfVec = normalize(viewDirection+lightDirection);
+
+            //Increasing the power has the effect of making the specular light more point like
+            float specAmount = pow(max(dot(normal, halfVec), 0.0f), 50);
+            specular = specAmount * specularLight;
+        }
+    }else{
+        float specularLight = 0.5f;
+        vec3 viewDirection = normalize(camPos - crntPosition);
+        vec3 reflectDirection = reflect(-lightDirection, normal);
+
+        //Increasing the power has the effect of making the specular light more point like
+        float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
+        specular = specAmount * specularLight;
+    }
 
     float angle = dot(vec3(0.0f, -1.0f, 0.0f), -lightDirection);
     float intensity = clamp((angle - outerCone)/(innerCone - outerCone), 0.0f, 1.0f);

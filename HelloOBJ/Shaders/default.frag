@@ -22,6 +22,7 @@ uniform vec3 camPos;
 uniform vec2 iResolution;
 uniform float iTime;
 uniform vec3 skyColor;
+uniform bool blinn;
 
 const float density = 0.05;
 const float gradient = 0.8;
@@ -100,18 +101,28 @@ vec4 spotLight(){
     vec3 lightDirection = normalize(lightPosition - crntPosition);
 
     float diffuse = max(dot(normal, lightDirection), 0.0f);
-    float specular = 0.0f;
 
-    if(diffuse != 0.0f){
+    float specular = 0.0f;
+    if(blinn){
+        if(diffuse != 0.0f){
+            float specularLight = 0.5f;
+            vec3 viewDirection = normalize(camPos - crntPosition);
+            vec3 reflectDirection = reflect(-lightDirection, normal);
+
+            vec3 halfVec = normalize(viewDirection+lightDirection);
+
+            //Increasing the power has the effect of making the specular light more point like
+            float specAmount = pow(max(dot(normal, halfVec), 0.0f), 50);
+            specular = specAmount * specularLight;
+        }
+    }else{
         float specularLight = 0.5f;
         vec3 viewDirection = normalize(camPos - crntPosition);
         vec3 reflectDirection = reflect(-lightDirection, normal);
 
-        vec3 halfVec = normalize(viewDirection+lightDirection);
-
         //Increasing the power has the effect of making the specular light more point like
-        float specAmount = pow(max(dot(normal, halfVec), 0.0f), 50);
-        float specular = specAmount * specularLight;
+        float specAmount = pow(max(dot(viewDirection, reflectDirection), 0.0f), 16);
+        specular = specAmount * specularLight;
     }
 
     float angle = dot(vec3(0.0f, -1.0f, 0.0f), -lightDirection);
@@ -133,7 +144,7 @@ void main(){
     vec4 lightingDirectional = directionalLight();
     vec4 lightingSpot = spotLight();
     vec4 lighting = lightingDirectional + lightingSpot;
-    //float visibility = fog();
-    float visibility = 1.0;
+    float visibility = fog();
+    //float visibility = 1.0;
     FragColor = mix(vec4(skyColor, 1.0f), lighting, visibility);
 };

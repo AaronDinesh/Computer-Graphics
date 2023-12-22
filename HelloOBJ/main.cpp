@@ -92,7 +92,7 @@ int HEIGHT = 1080;
 int main(){
     //srand(time(NULL));
     srand(0);
-
+    bool blinn = false;
     //Defining audio context
     ma_result result;
     ma_decoder decoder;
@@ -259,9 +259,12 @@ int main(){
     
     initTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -19.3f, 2.5f)) * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     scale = glm::vec3(2.0f, 2.5f, 2.0f);
-    Model human("Objects/HumanBlender/scene.gltf", scale, initTransform, true);
-    std::cout << "Center XYZ " << human.centerX << " " << human.centerY << " " << human.centerZ << std::endl;
-    
+    Model human("Objects/HumanBlender/scene.gltf", scale, initTransform);
+    //-0.601536, -17.585670, 2.600672
+    human.centerX = -0.601536;
+    human.centerY = -17.585670;
+    human.centerZ =  2.600672;
+
     zombieGroup1.objects[0] = &zombie1;
     zombieGroup1.objects[1] = &zombie2;
     zombieGroup1.objects[2] = &zombie3;
@@ -562,6 +565,15 @@ int main(){
             // }
         }
 
+        if(glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+            blinn = false;
+        }
+
+        
+        if(glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS){
+            blinn = true;
+        }
+
         camera.Inputs(window);
         glm::vec4 homoCenter = glm::vec4(1.0f);
         switch(camera.cameraState){
@@ -570,7 +582,7 @@ int main(){
                 camera.Position = glm::vec3(homoCenter.x, homoCenter.y, homoCenter.z);
                 break;
             case Camera::HUMAN:
-                homoCenter = glm::translate(glm::mat4(1.0f),glm::vec3(0.0f, 0.0f, 0.0f)) * glm::vec4(human.centerX, human.centerY, human.centerZ, 1.0f);
+                homoCenter = glm::translate(glm::mat4(1.0f), glm::vec3(human.translationX, human.translationY, human.translationZ)) * glm::vec4(human.centerX, human.centerY, human.centerZ, 1.0f);
                 camera.Position = glm::vec3(homoCenter.x, homoCenter.y, homoCenter.z);
                 break;
             default:
@@ -589,17 +601,23 @@ int main(){
         baseSceneShader.Activate();
         glUniform4f(glGetUniformLocation(baseSceneShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
         glUniform3f(glGetUniformLocation(baseSceneShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
-
+        glUniform1i(glGetUniformLocation(baseSceneShader.ID, "blinn"), blinn);
         baseScene.Draw(baseSceneShader, camera, resVec);
+
+        armyHelicopterBodyShader.Activate();
+        glUniform1i(glGetUniformLocation(armyHelicopterBodyShader.ID, "blinn"), blinn);
         armyHelicopterBody.myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(helicopter.offsetX, -helicopter.offsetY, helicopter.offsetZ)) * glm::translate(glm::mat4(1.0f), glm::vec3(armyHelicopterRotor.centerX, armyHelicopterRotor.centerY, armyHelicopterRotor.centerZ)) * glm::rotate(glm::mat4(1.0f), helicopter.heading, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::translate(glm::mat4(1.0f), glm::vec3(-armyHelicopterRotor.centerX, -armyHelicopterRotor.centerY, -armyHelicopterRotor.centerZ));
         armyHelicopterBody.Draw(armyHelicopterBodyShader, camera, resVec);
         
+        armyHelicopterRotorShader.Activate();
+        glUniform1i(glGetUniformLocation(armyHelicopterRotorShader.ID, "blinn"), blinn);
         armyHelicopterRotor.myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(helicopter.offsetX, -helicopter.offsetY, helicopter.offsetZ)) * glm::translate(glm::mat4(1.0f), glm::vec3(armyHelicopterRotor.centerX, armyHelicopterRotor.centerY, armyHelicopterRotor.centerZ)) * glm::rotate(glm::mat4(1.0f), glm::radians(helicopter.rotation), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::translate(glm::mat4(1.0f), glm::vec3(-armyHelicopterRotor.centerX, -armyHelicopterRotor.centerY, -armyHelicopterRotor.centerZ));
         armyHelicopterRotor.Draw(armyHelicopterRotorShader, camera, resVec);
 
         for(int i = 0; i < zombieGroup1.objectCount; i++){
             zombieGroup1.objectShaders[i]->Activate();
             zombieGroup1.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup1.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup1.offsetZ+(randFloat(5)/128.0f))) * glm::rotate(glm::mat4(1.0f), glm::radians(zombieGroup1.heading), glm::vec3(0.0f, 1.0f, 0.0f));
+            glUniform1i(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "blinn"), blinn);
             glUniform4f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
             glUniform3f(glGetUniformLocation(zombieGroup1.objectShaders[i]->ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
             zombieGroup1.objects[i]->Draw((*zombieGroup1.objectShaders[i]), camera, resVec);
@@ -608,12 +626,15 @@ int main(){
         for(int i = 0; i < zombieGroup2.objectCount; i++){
             zombieGroup2.objectShaders[i]->Activate();
             zombieGroup2.objects[i]->myTotalTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(zombieGroup2.offsetX+(randFloat(5)/128.0f), 0.0f, zombieGroup2.offsetZ+(randFloat(5)/128.0f))) * glm::rotate(glm::mat4(1.0f), glm::radians(zombieGroup2.heading), glm::vec3(0.0f, 1.0f, 0.0f));
+            glUniform1i(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "blinn"), blinn);        
             glUniform4f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
             glUniform3f(glGetUniformLocation(zombieGroup2.objectShaders[i]->ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
             zombieGroup2.objects[i]->Draw((*zombieGroup2.objectShaders[i]), camera, resVec);
         }
 
+        human.handleKeyboardInputs(window, humanShader);
         humanShader.Activate();
+        glUniform1i(glGetUniformLocation(humanShader.ID, "blinn"), blinn);
         glUniform4f(glGetUniformLocation(humanShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
         glUniform3f(glGetUniformLocation(humanShader.ID, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
         human.Draw(humanShader, camera, resVec);
